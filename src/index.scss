@@ -1,0 +1,199 @@
+// Group utilities
+// Usage examples:
+// <div class="group--vt--xs">  -> vertical column flex with gap .25rem
+// <div class="group--hz--md">  -> horizontal row flex with gap 1rem
+
+// Define gap sizes here so they can be adjusted centrally
+$group-gaps: (
+	xs: 0.25rem,
+	sm: 0.5rem,
+	md: 1rem,
+	lg: 1.5rem,
+);
+
+// Breakpoint variables
+$breakpoints: (
+	xs: 480px,
+	sm: 640px,
+	md: 768px,
+	lg: 1024px,
+	xl: 1280px,
+);
+
+// Helper mixins: bp-up and bp-down
+@mixin bp-up($key) {
+	$val: map-get($breakpoints, $key);
+	@if $val {
+		@media (min-width: $val) {
+			@content;
+		}
+	} @else {
+		@warn "Unknown breakpoint `#{$key}` in bp-up`";
+	}
+}
+
+@mixin bp-down($key) {
+	$val: map-get($breakpoints, $key);
+	@if $val {
+		@media (max-width: $val) {
+			@content;
+		}
+	} @else {
+		@warn "Unknown breakpoint `#{$key}` in bp-down`";
+	}
+}
+
+@mixin group($direction, $gap-key) {
+	display: flex;
+	@if $direction == vt {
+		flex-direction: column;
+	} @else if $direction == hz {
+		flex-direction: row;
+	}
+
+	$gap: map-get($group-gaps, $gap-key);
+	@if $gap {
+		gap: $gap;
+	}
+}
+
+// Generate the utility classes
+@each $dir in (vt, hz) {
+	@each $size, $value in $group-gaps {
+		.group--#{$dir}--#{$size} {
+			@include group($dir, $size);
+		}
+	}
+}
+
+* {
+	font: unset;
+	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+		Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue",
+		sans-serif;
+	margin: unset;
+	padding: unset;
+}
+
+main {
+	padding: 4rem 2rem;
+}
+
+h3 {
+	font-size: 1.125rem;
+	font-weight: bold;
+}
+
+button,
+.button {
+	cursor: pointer;
+	appearance: none;
+	border: none;
+	background: none;
+	padding: 0.5rem 1rem;
+	background-color: #cccccc;
+}
+
+/* Calendar grid basics (minimal styling) */
+.calendar {
+	width: 100%;
+}
+
+.calendar__header {
+	margin-bottom: 0.5rem;
+}
+
+.calendar__grid {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr); /* default desktop */
+	gap: 0.5rem;
+
+	@include bp-down(sm) {
+		grid-template-columns: 1fr; /* stack cells vertically on small screens */
+	}
+}
+
+.calendar__cell {
+	background-color: #eeeeee;
+
+	padding: 0.5rem;
+	box-sizing: border-box;
+
+	&--not-current-month {
+		opacity: 0.5;
+	}
+}
+
+.calendar__event {
+	padding: 0.5rem;
+	box-sizing: border-box;
+	background-color: #dddddd;
+}
+
+/* Responsive hide utilities
+	 Usage:
+		 <div class="hide--sm-up">hidden at sm and above</div>
+		 <div class="hide--md-down">hidden at md and below</div>
+*/
+
+@each $size, $val in $breakpoints {
+	// hide at and above breakpoint (min-width)
+	.hide--#{$size}-up {
+		@include bp-up($size) {
+			display: none !important;
+		}
+	}
+
+	// hide at and below breakpoint (max-width)
+	.hide--#{$size}-down {
+		@include bp-down($size) {
+			display: none !important;
+		}
+	}
+}
+
+/* Modal base styles used by ModalProvider */
+.modal-overlay {
+	position: fixed;
+	inset: 0;
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	background: rgba(0, 0, 0, 0.45);
+	z-index: 9999;
+	padding: 2rem;
+}
+
+.modal {
+	@extend .group--vt--lg;
+
+	background: #fff;
+	box-sizing: border-box;
+	padding: 1rem;
+	width: 100%;
+	max-width: map-get($breakpoints, sm);
+}
+
+form {
+	@extend .group--vt--md;
+}
+
+label {
+	@extend .group--vt--xs;
+}
+
+input:not([type="checkbox"]),
+select,
+textarea {
+	padding: 0.5rem;
+	border: 1px solid #ccc;
+	appearance: none;
+	resize: vertical;
+}
+
+input[type="checkbox"] {
+	transform-origin: top left;
+	width: 1.5rem;
+	height: 1.5rem;
+	scale: 1.25;
+}
