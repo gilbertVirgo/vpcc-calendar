@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 
 import CalendarGrid from "../../components/CalendarGrid";
 import moment from "moment";
+import { expandRecurringEvents } from "../../utils/eventUtils";
 import { useModal } from "../../contexts/ModalContext";
 
 // Using ModalContext and EventForm components
@@ -68,8 +69,9 @@ export default function EditCalendar() {
 	}, [current]);
 
 	const eventsByDate = useMemo(() => {
+		const expanded = expandRecurringEvents(events, startDate, endDate);
 		const map = {};
-		events.forEach((ev) => {
+		expanded.forEach((ev) => {
 			if (!ev.date) return;
 			const key = moment(ev.date).format("YYYY-MM-DD");
 			if (!map[key]) map[key] = [];

@@ -171,6 +171,60 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 		setLoading(true);
 		try {
 			const token = localStorage.getItem("token");
+			// If this is a synthetic recurrence (occurrence of a recurring event),
+			// we need to:
+			// 1) Add this date to the base event's recursionDetails.exceptions
+			// 2) Create a new single event with the edited details (so it appears edited)
+			if (event.isRecurrence && event.baseEventId) {
+				// patch base event to add exception
+				const baseId = event.baseEventId;
+				const exceptionDate = event.date;
+				const addExceptionRes = await fetch(
+					`/.netlify/functions/events?id=${baseId}`,
+					{
+						method: "PUT",
+						headers: {
+							"Content-Type": "application/json",
+							...(token
+								? { Authorization: `Bearer ${token}` }
+								: {}),
+						},
+						body: JSON.stringify({
+							$addToSet: {
+								"recursionDetails.exceptions": exceptionDate,
+							},
+						}),
+					}
+				);
+				if (!addExceptionRes.ok)
+					throw new Error(
+						"Failed to update base event for exception"
+					);
+				// create new single event for edited occurrence
+				const createRes = await fetch("/.netlify/functions/events", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						...(token ? { Authorization: `Bearer ${token}` } : {}),
+					},
+					body: JSON.stringify({
+						title,
+						date: event.date,
+						visibility,
+						recursWeekly: false,
+						location,
+						description,
+					}),
+				});
+				if (!createRes.ok)
+					throw new Error("Failed to create edited occurrence");
+				const created = await createRes.json();
+				onSaved && onSaved(created.event);
+				onClose && onClose();
+				setLoading(false);
+				return;
+			}
+
 			const res = await fetch(
 				`/.netlify/functions/events?id=${event._id}`,
 				{
@@ -188,6 +242,7 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 					}),
 				}
 			);
+
 			if (!res.ok) throw new Error("Failed to update");
 			const data = await res.json();
 			onSaved && onSaved(data.event);
@@ -201,7 +256,78 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 	}
 
 	async function remove() {
+		// If this is a recurrence occurrence, ask whether to delete just this occurrence or all future
 		if (!window.confirm("Delete this event?")) return;
+		if (event.isRecurrence && event.baseEventId) {
+			const choice = window.prompt(
+				"Type 'one' to delete only this occurrence, or 'all' to delete this and all future occurrences:",
+				"one"
+			);
+			if (!choice) return;
+			setLoading(true);
+			try {
+				const token = localStorage.getItem("token");
+				if (choice === "one") {
+					// Add this date to base event's exceptions
+					const res = await fetch(
+						`/.netlify/functions/events?id=${event.baseEventId}`,
+						{
+							method: "PUT",
+							headers: {
+								"Content-Type": "application/json",
+								...(token
+									? { Authorization: `Bearer ${token}` }
+									: {}),
+							},
+							body: JSON.stringify({
+								$addToSet: {
+									"recursionDetails.exceptions": event.date,
+								},
+							}),
+						}
+					);
+					if (!res.ok)
+						throw new Error(
+							"Failed to add exception to base event"
+						);
+					onDeleted && onDeleted(event);
+					onClose && onClose();
+					return;
+				} else if (choice === "all") {
+					// Set base event's endDate to this date (so future occurrences are removed)
+					const res = await fetch(
+						`/.netlify/functions/events?id=${event.baseEventId}`,
+						{
+							method: "PUT",
+							headers: {
+								"Content-Type": "application/json",
+								...(token
+									? { Authorization: `Bearer ${token}` }
+									: {}),
+							},
+							body: JSON.stringify({
+								recursionDetails: { endDate: event.date },
+							}),
+						}
+					);
+					if (!res.ok)
+						throw new Error("Failed to set base event endDate");
+					onDeleted && onDeleted(event);
+					onClose && onClose();
+					return;
+				} else {
+					alert("Unrecognized choice");
+					return;
+				}
+			} catch (err) {
+				console.error(err);
+				alert("Failed to delete: " + (err.message || ""));
+			} finally {
+				setLoading(false);
+			}
+		}
+
+		// Non-recurring or base-event deletion
 		setLoading(true);
 		try {
 			const token = localStorage.getItem("token");

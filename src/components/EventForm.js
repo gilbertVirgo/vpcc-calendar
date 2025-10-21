@@ -216,6 +216,65 @@ export function CreateEventForm({ date, onCreate, onClose }) {
 export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 	async function handleSubmit(data) {
 		const token = localStorage.getItem("token");
+		// If this is a recurrence occurrence, we need to add an exception to the base
+		// event and then create a new single event with the edited details.
+		if (event.isRecurrence && event.baseEventId) {
+			// add exception to base event
+			const baseRes = await fetch(
+				`/.netlify/functions/events?id=${event.baseEventId}`,
+				{
+					method: "PUT",
+					headers: {
+						"Content-Type": "application/json",
+						...(token ? { Authorization: `Bearer ${token}` } : {}),
+					},
+					body: JSON.stringify({
+						$addToSet: {
+							"recursionDetails.exceptions": event.date,
+						},
+					}),
+				}
+			);
+			if (!baseRes.ok) {
+				let txt;
+				try {
+					const j = await baseRes.json();
+					txt = j.error || JSON.stringify(j);
+				} catch (e) {
+					txt = await baseRes.text().catch(() => "(no body)");
+				}
+				throw new Error(
+					`Failed to update base event: ${baseRes.status} - ${txt}`
+				);
+			}
+
+			// create new single event with edited details
+			const createRes = await fetch(`/.netlify/functions/events`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					...(token ? { Authorization: `Bearer ${token}` } : {}),
+				},
+				body: JSON.stringify({ ...data, date: event.date }),
+			});
+			if (!createRes.ok) {
+				let txt;
+				try {
+					const j = await createRes.json();
+					txt = j.error || JSON.stringify(j);
+				} catch (e) {
+					txt = await createRes.text().catch(() => "(no body)");
+				}
+				throw new Error(
+					`Failed to create edited occurrence: ${createRes.status} - ${txt}`
+				);
+			}
+			const created = await createRes.json();
+			onSaved && onSaved(created.event);
+			onClose && onClose();
+			return;
+		}
+
 		const res = await fetch(`/.netlify/functions/events?id=${event._id}`, {
 			method: "PUT",
 			headers: {
@@ -242,7 +301,83 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 	}
 
 	async function handleDelete() {
+		// If this is a recurrence occurrence, ask user whether to delete just this occurrence or all future occurrences
 		const token = localStorage.getItem("token");
+		if (event.isRecurrence && event.baseEventId) {
+			const choice = window.prompt(
+				"Type 'one' to delete only this occurrence, or 'all' to delete this and all future occurrences:",
+				"one"
+			);
+			if (!choice) return;
+			if (choice === "one") {
+				const res = await fetch(
+					`/.netlify/functions/events?id=${event.baseEventId}`,
+					{
+						method: "PUT",
+						headers: {
+							"Content-Type": "application/json",
+							...(token
+								? { Authorization: `Bearer ${token}` }
+								: {}),
+						},
+						body: JSON.stringify({
+							$addToSet: {
+								"recursionDetails.exceptions": event.date,
+							},
+						}),
+					}
+				);
+				if (!res.ok) {
+					let txt;
+					try {
+						const j = await res.json();
+						txt = j.error || JSON.stringify(j);
+					} catch (e) {
+						txt = await res.text().catch(() => "(no body)");
+					}
+					throw new Error(
+						`Failed to add exception: ${res.status} - ${txt}`
+					);
+				}
+				onDeleted && onDeleted(event);
+				onClose && onClose();
+				return;
+			} else if (choice === "all") {
+				const res = await fetch(
+					`/.netlify/functions/events?id=${event.baseEventId}`,
+					{
+						method: "PUT",
+						headers: {
+							"Content-Type": "application/json",
+							...(token
+								? { Authorization: `Bearer ${token}` }
+								: {}),
+						},
+						body: JSON.stringify({
+							recursionDetails: { endDate: event.date },
+						}),
+					}
+				);
+				if (!res.ok) {
+					let txt;
+					try {
+						const j = await res.json();
+						txt = j.error || JSON.stringify(j);
+					} catch (e) {
+						txt = await res.text().catch(() => "(no body)");
+					}
+					throw new Error(
+						`Failed to set endDate: ${res.status} - ${txt}`
+					);
+				}
+				onDeleted && onDeleted(event);
+				onClose && onClose();
+				return;
+			} else {
+				throw new Error("Unrecognized choice");
+			}
+		}
+
 		const res = await fetch(`/.netlify/functions/events?id=${event._id}`, {
 			method: "DELETE",
 			headers: {
