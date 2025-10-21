@@ -26,11 +26,7 @@ exports.handler = async function (event) {
 
 		await connect();
 
-		console.log("Looking for user:", username);
-
 		const user = await User.findOne({ username }).exec();
-
-		console.log({ user });
 
 		if (!user) {
 			return {

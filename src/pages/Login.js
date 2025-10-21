@@ -2,6 +2,7 @@ import React, { useState } from "react";
 
 import { useError } from "../contexts/ErrorContext";
 import { useHistory } from "react-router-dom";
+import { useUser } from "../contexts/UserContext";
 
 export default function Login() {
 	// username is hidden from the UI but exists in state; default 'general'
@@ -11,6 +12,7 @@ export default function Login() {
 	const [success, setSuccess] = useState(null);
 
 	const history = useHistory();
+	const { refreshUser } = useUser();
 
 	async function handleSubmit(e) {
 		e.preventDefault();
@@ -30,6 +32,7 @@ export default function Login() {
 			// store token and redirect to calendar
 			if (data.token) {
 				localStorage.setItem("token", data.token);
+				refreshUser();
 			}
 			setSuccess(
 				`Logged in as ${data.user.username} (${data.user.role})`

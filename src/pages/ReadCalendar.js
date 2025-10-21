@@ -1,9 +1,7 @@
-import { CreateEventForm, EditEventForm } from "../components/EventModals";
 import React, { useEffect, useMemo, useState } from "react";
 
 import CalendarGrid from "../components/CalendarGrid";
 import moment from "moment";
-import { useModal } from "../contexts/ModalContext";
 
 export default function Calendar() {
 	const [current, setCurrent] = useState(() => moment());
@@ -86,33 +84,6 @@ export default function Calendar() {
 		setCurrent((c) => c.clone().add(1, "month"));
 	}
 
-	const { showModal } = useModal();
-
-	function handleCreateClick(date) {
-		showModal(({ close }) => (
-			<CreateEventForm
-				date={date}
-				onCreate={(ev) => setEvents((p) => [...p, ev])}
-				onClose={() => close()}
-			/>
-		));
-	}
-
-	function handleEventClick(ev) {
-		showModal(({ close }) => (
-			<EditEventForm
-				event={ev}
-				onSaved={(u) =>
-					setEvents((p) => p.map((x) => (x._id === u._id ? u : x)))
-				}
-				onDeleted={(d) =>
-					setEvents((p) => p.filter((x) => x._id !== d._id))
-				}
-				onClose={() => close()}
-			/>
-		));
-	}
-
 	return (
 		<div className="page page--calendar">
 			<CalendarGrid
@@ -121,8 +92,6 @@ export default function Calendar() {
 				eventsByDate={eventsByDate}
 				onPrev={prevMonth}
 				onNext={nextMonth}
-				onEventClick={handleEventClick}
-				onCreateClick={handleCreateClick}
 			/>
 		</div>
 	);

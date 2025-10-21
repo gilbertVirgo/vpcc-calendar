@@ -79,6 +79,15 @@ main {
 	padding: 4rem 2rem;
 }
 
+p {
+	font-size: 1rem;
+	line-height: 130%;
+
+	&.small {
+		font-size: 0.875rem;
+	}
+}
+
 h3 {
 	font-size: 1.125rem;
 	font-weight: bold;
@@ -101,6 +110,14 @@ button,
 
 .calendar__header {
 	margin-bottom: 0.5rem;
+	align-items: center;
+}
+
+.calendar__header-title {
+	@include bp-down(sm) {
+		flex: 1;
+		text-align: center;
+	}
 }
 
 .calendar__grid {

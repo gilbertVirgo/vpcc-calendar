@@ -20,14 +20,14 @@ export default function CalendarGrid({
 	onEventClick,
 }) {
 	return (
-		<div className="calendar">
+		<div className="calendar group--vt--md">
 			<div className="calendar__header group--hz--md">
 				<button onClick={onPrev} aria-label="Previous month">
 					◀
 				</button>
-				<div style={{ fontWeight: 600 }}>
+				<h3 className="calendar__header-title">
 					{current.format("MMMM YYYY")}
-				</div>
+				</h3>
 				<button onClick={onNext} aria-label="Next month">
 					▶
 				</button>
@@ -42,16 +42,25 @@ export default function CalendarGrid({
 				{days.map((day) => {
 					const isCurrentMonth = day.month() === current.month();
 					const key = day.format("YYYY-MM-DD");
+
+					let shouldHideOnMobile =
+						!isCurrentMonth || (!eventsByDate[key] && !showCreate);
 					return (
 						<div
 							key={key}
 							className={`calendar__cell group--vt--sm ${
 								!isCurrentMonth
-									? "calendar__cell--not-current-month hide--sm-down"
+									? "calendar__cell--not-current-month"
 									: ""
-							}`}
+							}
+							${shouldHideOnMobile ? "hide--sm-down" : ""}`}
 						>
-							<p className="hide--sm-down">{day.format("D")}</p>
+							<p
+								className="hide--sm-down"
+								style={{ textAlign: "right" }}
+							>
+								{day.format("D")}
+							</p>
 							<p className="hide--sm-up">
 								{day.format("dddd D MMMM")}
 							</p>
@@ -88,7 +97,9 @@ export default function CalendarGrid({
 												<p>{ev.location}</p>
 											)}
 											{ev.description && (
-												<p>{ev.description}</p>
+												<p className="small">
+													{ev.description}
+												</p>
 											)}
 										</div>
 									))}
