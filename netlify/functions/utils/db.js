@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+const path = require("path");
+require("dotenv").config({ path: path.resolve(__dirname, "../../..", ".env") });
 
 // Support multiple common env names
 const MONGO_URI =
@@ -30,8 +32,6 @@ async function connect() {
 
 	if (!global._mongoMongoose.promise) {
 		const opts = {
-			useNewUrlParser: true,
-			useUnifiedTopology: true,
 			// Fail fast if the server selection cannot be made
 			serverSelectionTimeoutMS: 10000,
 			connectTimeoutMS: 10000,
@@ -49,7 +49,13 @@ async function connect() {
 						err && err.message ? err.message : err
 					);
 				});
-				console.log("[db] connected");
+				mongooseInstance.connection.on("disconnected", () => {
+					console.log("[db] disconnected");
+				});
+				mongooseInstance.connection.on("reconnected", () => {
+					console.log("[db] reconnected");
+				});
+				console.log("[db] connected successfully");
 				return mongooseInstance;
 			})
 			.catch((err) => {

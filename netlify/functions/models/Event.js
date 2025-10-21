@@ -12,6 +12,10 @@ const eventSchema = new Schema(
 			default: "public",
 		},
 		recursWeekly: { type: Boolean, default: false },
+		recursionDetails: {
+			endDate: { type: Date },
+			exceptions: { type: [Date] },
+		},
 		location: { type: String },
 		description: { type: String },
 	},

@@ -6,6 +6,7 @@ export function CreateEventForm({ date, onCreate, onClose }) {
 	const [title, setTitle] = useState("");
 	const [visibility, setVisibility] = useState("public");
 	const [recursWeekly, setRecursWeekly] = useState(false);
+	const [endDate, setEndDate] = useState("");
 	const [location, setLocation] = useState("");
 	const [description, setDescription] = useState("");
 	const [loading, setLoading] = useState(false);
@@ -14,6 +15,7 @@ export function CreateEventForm({ date, onCreate, onClose }) {
 		setTitle("");
 		setVisibility("public");
 		setRecursWeekly(false);
+		setEndDate("");
 		setLocation("");
 		setDescription("");
 	}, [date]);
@@ -28,9 +30,11 @@ export function CreateEventForm({ date, onCreate, onClose }) {
 				date: date.toDate(),
 				visibility,
 				recursWeekly,
+				endDate: endDate || undefined,
 				location,
 				description,
 			};
+
 			const res = await fetch("/.netlify/functions/events", {
 				method: "POST",
 				headers: {
@@ -39,7 +43,18 @@ export function CreateEventForm({ date, onCreate, onClose }) {
 				},
 				body: JSON.stringify(body),
 			});
-			if (!res.ok) throw new Error("Failed to create");
+			if (!res.ok) {
+				let txt;
+				try {
+					const j = await res.json();
+					txt = j.error || JSON.stringify(j);
+				} catch (e) {
+					txt = await res.text().catch(() => "(no body)");
+				}
+				throw new Error(
+					`Failed to create: ${res.status} ${res.statusText} - ${txt}`
+				);
+			}
 			const data = await res.json();
 			onCreate && onCreate(data.event);
 			onClose && onClose();
@@ -84,6 +99,17 @@ export function CreateEventForm({ date, onCreate, onClose }) {
 					/>
 				</label>
 
+				{recursWeekly && (
+					<label>
+						End Date
+						<input
+							type="date"
+							value={endDate}
+							onChange={(e) => setEndDate(e.target.value)}
+						/>
+					</label>
+				)}
+
 				<label>
 					Location
 					<input
@@ -121,6 +147,7 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 	const [recursWeekly, setRecursWeekly] = useState(
 		event ? !!event.recursWeekly : false
 	);
+	const [endDate, setEndDate] = useState(event ? event.endDate || "" : "");
 	const [location, setLocation] = useState(event ? event.location : "");
 	const [description, setDescription] = useState(
 		event ? event.description : ""
@@ -132,11 +159,11 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 			setTitle(event.title || "");
 			setVisibility(event.visibility || "public");
 			setRecursWeekly(!!event.recursWeekly);
+			setEndDate(event.endDate || "");
 			setLocation(event.location || "");
 			setDescription(event.description || "");
 		}
 	}, [event]);
-
 	if (!event) return null;
 
 	async function save(e) {
@@ -234,6 +261,18 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 						/>
 					</label>
 				</div>
+				{recursWeekly && (
+					<div>
+						<label>
+							End Date
+							<input
+								type="date"
+								value={endDate}
+								onChange={(e) => setEndDate(e.target.value)}
+							/>
+						</label>
+					</div>
+				)}
 				<div>
 					<label>
 						Location
@@ -267,5 +306,3 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 		</>
 	);
 }
-
-export default null;

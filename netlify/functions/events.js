@@ -5,13 +5,38 @@ const { requireAuth } = require("./utils/requireAuth");
 
 exports.handler = async function (event) {
 	try {
-		const auth = await requireAuth(event);
-		if (!auth.ok) return auth.response;
+		// Log incoming request for debugging
+		console.log("[events] incoming request", {
+			method: event.httpMethod,
+			path: event.path,
+			qs: event.queryStringParameters,
+		});
+		// Allow unauthenticated GET requests so public calendars can be viewed
+		// without a token. For non-GET methods require authentication.
+		let role = null;
+		const method = event.httpMethod;
+
+		// If a token is present, validate and set role. For non-GET methods
+		// authentication is mandatory.
+		const hasAuthHeader =
+			event.headers &&
+			(event.headers.Authorization || event.headers.authorization);
+
+		if (method !== "GET") {
+			const auth = await requireAuth(event);
+			if (!auth.ok) return auth.response;
+			role = auth.user && auth.user.role;
+			console.log("[events] authenticated user role", { role });
+		} else if (hasAuthHeader) {
+			const auth = await requireAuth(event);
+			if (auth.ok) role = auth.user && auth.user.role;
+			console.log("[events] optional auth header present, role set to", {
+				role,
+			});
+		}
 
 		await connect();
-
-		const method = event.httpMethod;
-		const role = auth.user && auth.user.role;
+		console.log("[events] DB connected");
 
 		if (method === "GET") {
 			// If id provided, return single event
@@ -47,9 +72,37 @@ exports.handler = async function (event) {
 				.startOf("day")
 				.toDate();
 			const end = moment(start).endOf("month").endOf("day").toDate();
-			const filter = { date: { $gte: start, $lte: end } };
+			console.log("[events] query range", {
+				start: start.toISOString(),
+				end: end.toISOString(),
+				year,
+				month,
+			});
+
+			// Get all events that could affect this month:
+			// 1. Events with date within current month
+			// 2. Recurring events that started before current month (they'll be expanded on frontend)
+			const filter = {
+				$or: [
+					// Events within current month (both recurring and non-recurring)
+					{ date: { $gte: start, $lte: end } },
+					// Recurring events that started before current month
+					{
+						recursWeekly: true,
+						date: { $lt: start },
+						$or: [
+							{ endDate: { $exists: false } },
+							{ endDate: null },
+							{ endDate: { $gte: start } },
+						],
+					},
+				],
+			};
 			if (role !== "admin") filter.visibility = "public";
 			const events = await Event.find(filter).lean().exec();
+			console.log("[events] returning events count", {
+				count: events.length,
+			});
 			return { statusCode: 200, body: JSON.stringify({ events }) };
 		}
 
@@ -60,6 +113,7 @@ exports.handler = async function (event) {
 					body: JSON.stringify({ error: "Forbidden" }),
 				};
 			const body = JSON.parse(event.body || "{}");
+			console.log("[events] POST body", body);
 			const created = await Event.create(body);
 			return {
 				statusCode: 201,
@@ -74,6 +128,7 @@ exports.handler = async function (event) {
 					body: JSON.stringify({ error: "Forbidden" }),
 				};
 			const qs = event.queryStringParameters || {};
+			console.log("[events] PUT qs", qs);
 			if (!qs.id) {
 				return {
 					statusCode: 400,
@@ -83,6 +138,7 @@ exports.handler = async function (event) {
 				};
 			}
 			const body = JSON.parse(event.body || "{}");
+			console.log("[events] PUT body", { id: qs.id, body });
 			const updated = await Event.findByIdAndUpdate(qs.id, body, {
 				new: true,
 			})
@@ -101,6 +157,7 @@ exports.handler = async function (event) {
 					body: JSON.stringify({ error: "Forbidden" }),
 				};
 			const qs = event.queryStringParameters || {};
+			console.log("[events] DELETE qs", qs);
 			if (!qs.id) {
 				return {
 					statusCode: 400,
@@ -118,7 +175,10 @@ exports.handler = async function (event) {
 			body: JSON.stringify({ error: "Method not allowed" }),
 		};
 	} catch (err) {
-		console.error(err);
+		console.error(
+			"[events] error",
+			err && (err.stack || err.message || err)
+		);
 		return {
 			statusCode: 500,
 			body: JSON.stringify({ error: err.message || "Internal error" }),

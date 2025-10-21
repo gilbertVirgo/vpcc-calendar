@@ -4,6 +4,11 @@
   functions = "netlify/functions"
   publish = "build"
 
+  ## Environment variables for production (set in Netlify dashboard)
+  # [build.environment]
+  #   MONGODB_URI = "your-production-mongo-uri"
+  #   JWT_SECRET = "your-production-jwt-secret"
+
   ## Uncomment to use this redirect for Single Page Applications like create-react-app.
   ## Not needed for static site generators.
   #[[redirects]]

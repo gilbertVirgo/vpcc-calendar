@@ -33,15 +33,15 @@ export default function Calendar() {
 	}, [startDate, endDate]);
 
 	const eventsByDate = useMemo(() => {
-		const map = {};
-		(events || []).forEach((ev) => {
-			const d = ev.date ? moment(ev.date).format("YYYY-MM-DD") : null;
-			if (!d) return;
-			if (!map[d]) map[d] = [];
-			map[d].push(ev);
-		});
-		return map;
-	}, [events]);
+                const map = {};
+                (events || []).forEach((ev) => {
+                        const d = ev.date ? moment(ev.date).format("YYYY-MM-DD") : null;
+                        if (!d) return;
+                        if (!map[d]) map[d] = [];
+                        map[d].push(ev);
+                });
+                return map;		return map;
+	}, [events, startDate, endDate]);
 
 	useEffect(() => {
 		let cancelled = false;
