@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 import moment from "moment";
+import { useConfirm } from "../contexts/ConfirmModalContext";
 
 // Shared Event Form Component
 function EventForm({
@@ -24,7 +25,25 @@ function EventForm({
 	const [description, setDescription] = useState(
 		event ? event.description || "" : ""
 	);
+	const [startTime, setStartTime] = useState(
+		event && event.time && event.time.start
+			? `${String(event.time.start[0]).padStart(2, "0")}:${String(
+					event.time.start[1]
+			  ).padStart(2, "0")}`
+			: ""
+	);
+	const [endTime, setEndTime] = useState(
+		event && event.time && event.time.end
+			? `${String(event.time.end[0]).padStart(2, "0")}:${String(
+					event.time.end[1]
+			  ).padStart(2, "0")}`
+			: ""
+	);
 	const [loading, setLoading] = useState(false);
+	const [timeError, setTimeError] = useState(null);
+
+	// confirm modal hook (must be called at top-level of component)
+	const confirm = useConfirm();
 
 	useEffect(() => {
 		if (event) {
@@ -34,6 +53,20 @@ function EventForm({
 			setEndDate(event.endDate || "");
 			setLocation(event.location || "");
 			setDescription(event.description || "");
+			setStartTime(
+				event.time && event.time.start
+					? `${String(event.time.start[0]).padStart(2, "0")}:${String(
+							event.time.start[1]
+					  ).padStart(2, "0")}`
+					: ""
+			);
+			setEndTime(
+				event.time && event.time.end
+					? `${String(event.time.end[0]).padStart(2, "0")}:${String(
+							event.time.end[1]
+					  ).padStart(2, "0")}`
+					: ""
+			);
 		} else if (date) {
 			// Reset for create mode
 			setTitle("");
@@ -45,17 +78,48 @@ function EventForm({
 		}
 	}, [event, date]);
 
+	function parseTimeToArray(t) {
+		if (!t) return null;
+		// expect 'HH:MM'
+		const parts = t.split(":");
+		if (parts.length < 2) return null;
+		const h = parseInt(parts[0], 10);
+		const m = parseInt(parts[1], 10);
+		if (Number.isNaN(h) || Number.isNaN(m)) return null;
+		return [h, m];
+	}
+
 	async function handleSubmit(e) {
 		e.preventDefault();
 		setLoading(true);
 		try {
+			setTimeError(null);
+			// validate time range when both present
+			const s = parseTimeToArray(startTime);
+			const en = parseTimeToArray(endTime);
+			if (s && en) {
+				const sMin = s[0] * 60 + s[1];
+				const eMin = en[0] * 60 + en[1];
+				if (eMin < sMin) {
+					setTimeError("End time cannot be before start time");
+					setLoading(false);
+					return;
+				}
+			}
 			let body = {
 				title,
 				visibility,
 				recursWeekly,
+				time: undefined,
 				location,
 				description,
 			};
+
+			if (s || en) {
+				body.time = {};
+				if (s) body.time.start = s;
+				if (en) body.time.end = en;
+			}
 
 			if (recursWeekly && endDate) body.recursionDetails = { endDate };
 
@@ -72,7 +136,13 @@ function EventForm({
 	}
 
 	async function handleDelete() {
-		if (!window.confirm("Delete this event?")) return;
+		const ok = await confirm({
+			title: "Delete event",
+			message: "Delete this event?",
+			confirmText: "Delete",
+			cancelText: "Cancel",
+		});
+		if (!ok) return;
 		setLoading(true);
 		try {
 			await onDelete();
@@ -139,6 +209,30 @@ function EventForm({
 						onChange={(e) => setLocation(e.target.value)}
 					/>
 				</label>
+
+				<label>
+					Start time
+					<input
+						type="time"
+						value={startTime}
+						onChange={(e) => setStartTime(e.target.value)}
+					/>
+				</label>
+
+				<label>
+					End time
+					<input
+						type="time"
+						value={endTime}
+						onChange={(e) => setEndTime(e.target.value)}
+					/>
+				</label>
+
+				{timeError ? (
+					<div style={{ color: "#c00", marginTop: "0.4rem" }}>
+						{timeError}
+					</div>
+				) : null}
 
 				<label>
 					Description
@@ -214,6 +308,8 @@ export function CreateEventForm({ date, onCreate, onClose }) {
 }
 
 export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
+	// confirm hook for this component
+	const confirm = useConfirm();
 	async function handleSubmit(data) {
 		const token = localStorage.getItem("token");
 		// If this is a recurrence occurrence, we need to add an exception to the base
@@ -304,10 +400,15 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 		// If this is a recurrence occurrence, ask user whether to delete just this occurrence or all future occurrences
 		const token = localStorage.getItem("token");
 		if (event.isRecurrence && event.baseEventId) {
-			const choice = window.prompt(
-				"Type 'one' to delete only this occurrence, or 'all' to delete this and all future occurrences:",
-				"one"
-			);
+			const choice = await confirm({
+				title: "Delete recurrence",
+				message: "How would you like to delete this recurring event?",
+				cancelText: "Cancel",
+				choices: [
+					{ label: "Only this event", value: "one" },
+					{ label: "All future occurrences", value: "all" },
+				],
+			});
 			if (!choice) return;
 			if (choice === "one") {
 				const res = await fetch(

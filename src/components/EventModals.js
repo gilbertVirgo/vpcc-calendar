@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-import moment from "moment";
+import { useConfirm } from "../contexts/ConfirmModalContext";
 
 export function CreateEventForm({ date, onCreate, onClose }) {
 	const [title, setTitle] = useState("");
@@ -9,7 +9,10 @@ export function CreateEventForm({ date, onCreate, onClose }) {
 	const [endDate, setEndDate] = useState("");
 	const [location, setLocation] = useState("");
 	const [description, setDescription] = useState("");
+	const [startTime, setStartTime] = useState("");
+	const [endTime, setEndTime] = useState("");
 	const [loading, setLoading] = useState(false);
+	const [timeError, setTimeError] = useState(null);
 
 	useEffect(() => {
 		setTitle("");
@@ -18,12 +21,37 @@ export function CreateEventForm({ date, onCreate, onClose }) {
 		setEndDate("");
 		setLocation("");
 		setDescription("");
+		setStartTime("");
+		setEndTime("");
 	}, [date]);
+
+	function parseTimeToArray(t) {
+		if (!t) return null;
+		const parts = t.split(":");
+		if (parts.length < 2) return null;
+		const h = parseInt(parts[0], 10);
+		const m = parseInt(parts[1], 10);
+		if (Number.isNaN(h) || Number.isNaN(m)) return null;
+		return [h, m];
+	}
 
 	async function submit(e) {
 		e.preventDefault();
 		setLoading(true);
 		try {
+			setTimeError(null);
+			// validate time range
+			const startArr = parseTimeToArray(startTime);
+			const endArr = parseTimeToArray(endTime);
+			if (startArr && endArr) {
+				const sMin = startArr[0] * 60 + startArr[1];
+				const eMin = endArr[0] * 60 + endArr[1];
+				if (eMin < sMin) {
+					setTimeError("End time cannot be before start time");
+					setLoading(false);
+					return;
+				}
+			}
 			const token = localStorage.getItem("token");
 			const body = {
 				title,
@@ -31,9 +59,18 @@ export function CreateEventForm({ date, onCreate, onClose }) {
 				visibility,
 				recursWeekly,
 				endDate: endDate || undefined,
+				time: undefined,
 				location,
 				description,
 			};
+
+			const s = parseTimeToArray(startTime);
+			const en = parseTimeToArray(endTime);
+			if (s || en) {
+				body.time = {};
+				if (s) body.time.start = s;
+				if (en) body.time.end = en;
+			}
 
 			const res = await fetch("/.netlify/functions/events", {
 				method: "POST",
@@ -119,6 +156,36 @@ export function CreateEventForm({ date, onCreate, onClose }) {
 				</label>
 
 				<label>
+					Start time
+					<input
+						type="time"
+						value={startTime}
+						onChange={(e) => setStartTime(e.target.value)}
+					/>
+				</label>
+
+				<label>
+					End time
+					<input
+						type="time"
+						value={endTime}
+						onChange={(e) => setEndTime(e.target.value)}
+					/>
+				</label>
+
+				{timeError ? (
+					<div style={{ color: "#c00", marginTop: "0.4rem" }}>
+						{timeError}
+					</div>
+				) : null}
+
+				{timeError ? (
+					<div style={{ color: "#c00", marginTop: "0.4rem" }}>
+						{timeError}
+					</div>
+				) : null}
+
+				<label>
 					Description
 					<textarea
 						value={description}
@@ -152,7 +219,24 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 	const [description, setDescription] = useState(
 		event ? event.description : ""
 	);
+	const [startTime, setStartTime] = useState(
+		event && event.time && event.time.start
+			? `${String(event.time.start[0]).padStart(2, "0")}:${String(
+					event.time.start[1]
+			  ).padStart(2, "0")}`
+			: ""
+	);
+	const [endTime, setEndTime] = useState(
+		event && event.time && event.time.end
+			? `${String(event.time.end[0]).padStart(2, "0")}:${String(
+					event.time.end[1]
+			  ).padStart(2, "0")}`
+			: ""
+	);
 	const [loading, setLoading] = useState(false);
+
+	// confirm hook (must be called at top-level)
+	const confirm = useConfirm();
 
 	useEffect(() => {
 		if (event) {
@@ -162,14 +246,51 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 			setEndDate(event.endDate || "");
 			setLocation(event.location || "");
 			setDescription(event.description || "");
+			setStartTime(
+				event.time && event.time.start
+					? `${String(event.time.start[0]).padStart(2, "0")}:${String(
+							event.time.start[1]
+					  ).padStart(2, "0")}`
+					: ""
+			);
+			setEndTime(
+				event.time && event.time.end
+					? `${String(event.time.end[0]).padStart(2, "0")}:${String(
+							event.time.end[1]
+					  ).padStart(2, "0")}`
+					: ""
+			);
 		}
 	}, [event]);
+
+	function parseTimeToArray(t) {
+		if (!t) return null;
+		const parts = t.split(":");
+		if (parts.length < 2) return null;
+		const h = parseInt(parts[0], 10);
+		const m = parseInt(parts[1], 10);
+		if (Number.isNaN(h) || Number.isNaN(m)) return null;
+		return [h, m];
+	}
 	if (!event) return null;
 
 	async function save(e) {
 		e.preventDefault();
 		setLoading(true);
 		try {
+			setTimeError(null);
+			// validate time range
+			const startArr = parseTimeToArray(startTime);
+			const endArr = parseTimeToArray(endTime);
+			if (startArr && endArr) {
+				const sMin = startArr[0] * 60 + startArr[1];
+				const eMin = endArr[0] * 60 + endArr[1];
+				if (eMin < sMin) {
+					setTimeError("End time cannot be before start time");
+					setLoading(false);
+					return;
+				}
+			}
 			const token = localStorage.getItem("token");
 			// If this is a synthetic recurrence (occurrence of a recurring event),
 			// we need to:
@@ -214,6 +335,15 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 						recursWeekly: false,
 						location,
 						description,
+						time: (() => {
+							const s = parseTimeToArray(startTime);
+							const en = parseTimeToArray(endTime);
+							if (!s && !en) return undefined;
+							const t = {};
+							if (s) t.start = s;
+							if (en) t.end = en;
+							return t;
+						})(),
 					}),
 				});
 				if (!createRes.ok)
@@ -239,6 +369,15 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 						recursWeekly,
 						location,
 						description,
+						time: (() => {
+							const s = parseTimeToArray(startTime);
+							const en = parseTimeToArray(endTime);
+							if (!s && !en) return undefined;
+							const t = {};
+							if (s) t.start = s;
+							if (en) t.end = en;
+							return t;
+						})(),
 					}),
 				}
 			);
@@ -256,13 +395,26 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 	}
 
 	async function remove() {
-		// If this is a recurrence occurrence, ask whether to delete just this occurrence or all future
-		if (!window.confirm("Delete this event?")) return;
+		const ok = await confirm({
+			title: "Delete event",
+			message: "Delete this event?",
+			confirmText: "Delete",
+			cancelText: "Cancel",
+		});
+		if (!ok) return;
 		if (event.isRecurrence && event.baseEventId) {
-			const choice = window.prompt(
-				"Type 'one' to delete only this occurrence, or 'all' to delete this and all future occurrences:",
-				"one"
-			);
+			const choice = await confirm({
+				title: "Delete recurrence",
+				message: "Choose how to delete this recurring event:",
+				cancelText: "Cancel",
+				choices: [
+					{ label: "Delete only this occurrence", value: "one" },
+					{
+						label: "Delete this and all future occurrences",
+						value: "all",
+					},
+				],
+			});
 			if (!choice) return;
 			setLoading(true);
 			try {

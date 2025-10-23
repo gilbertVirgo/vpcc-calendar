@@ -6,6 +6,10 @@ const eventSchema = new Schema(
 	{
 		title: { type: String, required: true },
 		date: { type: Date, required: true },
+		time: {
+			start: [Number, Number], // hour, minute
+			end: [Number, Number], // hour, minute
+		},
 		visibility: {
 			type: String,
 			enum: ["public", "private"],

@@ -1,6 +1,20 @@
 import React from "react";
 import moment from "moment";
 
+function formatTime(arrOrObj) {
+	if (!arrOrObj) return null;
+	let arr = null;
+	if (Array.isArray(arrOrObj)) arr = arrOrObj;
+	else if (arrOrObj.start && Array.isArray(arrOrObj.start))
+		arr = arrOrObj.start;
+	if (!arr) return null;
+	const h = Number(arr[0]);
+	const m = Number(arr[1] || 0);
+	if (Number.isNaN(h) || Number.isNaN(m)) return null;
+	const fmt = m === 0 ? "ha" : "h:mma";
+	return moment({ hour: h, minute: m }).format(fmt);
+}
+
 // CalendarGrid is a presentational component used by Calendar and EditCalendar.
 // Props:
 // - days: array of moment days to render (in order)
@@ -96,11 +110,31 @@ export default function CalendarGrid({
 											{ev.location && (
 												<p>{ev.location}</p>
 											)}
-											{ev.description && (
+											{(ev.time ||
+												ev.start ||
+												ev.time?.start) && (
+												<p className="small">
+													{formatTime(
+														ev.time ||
+															ev.start ||
+															(ev.time &&
+																ev.time.start)
+													)}
+													-
+													{formatTime(
+														ev.time?.end ||
+															ev.end ||
+															(ev.time &&
+																ev.time.end)
+													)}
+												</p>
+											)}
+
+											{/* {ev.description && (
 												<p className="small">
 													{ev.description}
 												</p>
-											)}
+											)} */}
 										</div>
 									))}
 								</div>

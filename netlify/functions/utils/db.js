@@ -10,7 +10,11 @@ const MONGO_URI =
 
 // Cached connection for serverless environments
 if (!global._mongoMongoose) {
-	global._mongoMongoose = { conn: null, promise: null };
+	global._mongoMongoose = {
+		conn: null,
+		promise: null,
+		listenersAttached: false,
+	};
 }
 
 function maskUri(uri) {
@@ -20,7 +24,12 @@ function maskUri(uri) {
 }
 
 async function connect() {
-	if (global._mongoMongoose.conn) {
+	// If we already have a connected mongoose instance, return it
+	if (
+		global._mongoMongoose.conn &&
+		global._mongoMongoose.conn.connection &&
+		global._mongoMongoose.conn.connection.readyState === 1
+	) {
 		return global._mongoMongoose.conn;
 	}
 
@@ -31,31 +40,46 @@ async function connect() {
 	}
 
 	if (!global._mongoMongoose.promise) {
+		// disable mongoose buffering of commands to fail fast when disconnected
+		mongoose.set("bufferCommands", false);
+
 		const opts = {
 			// Fail fast if the server selection cannot be made
 			serverSelectionTimeoutMS: 10000,
 			connectTimeoutMS: 10000,
 			socketTimeoutMS: 45000,
+			useNewUrlParser: true,
+			useUnifiedTopology: true,
+			family: 4,
 		};
 
 		console.log("[db] connecting to", maskUri(MONGO_URI));
 
+		// Attach connection event listeners only once to avoid duplicate logs
+		if (!global._mongoMongoose.listenersAttached) {
+			mongoose.connection.on("error", (err) => {
+				console.error(
+					"[db] connection error:",
+					err && err.message ? err.message : err
+				);
+			});
+			mongoose.connection.on("disconnected", () => {
+				console.log("[db] disconnected");
+			});
+			mongoose.connection.on("reconnected", () => {
+				console.log("[db] reconnected");
+			});
+			global._mongoMongoose.listenersAttached = true;
+		}
+
 		global._mongoMongoose.promise = mongoose
 			.connect(MONGO_URI, opts)
 			.then((mongooseInstance) => {
-				mongooseInstance.connection.on("error", (err) => {
-					console.error(
-						"[db] connection error:",
-						err && err.message ? err.message : err
-					);
-				});
-				mongooseInstance.connection.on("disconnected", () => {
-					console.log("[db] disconnected");
-				});
-				mongooseInstance.connection.on("reconnected", () => {
-					console.log("[db] reconnected");
-				});
-				console.log("[db] connected successfully");
+				console.log(
+					"[db] connected successfully (readyState=",
+					mongooseInstance.connection.readyState,
+					")"
+				);
 				return mongooseInstance;
 			})
 			.catch((err) => {
@@ -73,4 +97,20 @@ async function connect() {
 	return global._mongoMongoose.conn;
 }
 
-module.exports = { connect };
+async function disconnect() {
+	try {
+		if (global._mongoMongoose && global._mongoMongoose.conn) {
+			await mongoose.disconnect();
+			global._mongoMongoose.conn = null;
+			global._mongoMongoose.promise = null;
+			console.log("[db] disconnected via helper");
+		}
+	} catch (err) {
+		console.error(
+			"[db] error during disconnect",
+			err && err.message ? err.message : err
+		);
+	}
+}
+
+module.exports = { connect, disconnect };

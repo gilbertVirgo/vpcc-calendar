@@ -62,6 +62,8 @@ export default function EditCalendar() {
 				if (!cancelled) setEvents([]);
 			}
 		}
+
+		// expose load via ref on component scope by storing it on stateless variable
 		load();
 		return () => {
 			cancelled = true;
@@ -99,8 +101,9 @@ export default function EditCalendar() {
 	}
 
 	function handleCreate(event) {
-		// refresh events by reloading current month
-		setEvents((prev) => [...prev, event]);
+		// reload from server to ensure recurring/exception state is fresh
+		// by updating current (same month) we trigger the effect to load
+		setCurrent((s) => s.clone());
 	}
 
 	function handleEventClick(ev) {
@@ -116,13 +119,13 @@ export default function EditCalendar() {
 	}
 
 	function handleSaved(updated) {
-		setEvents((prev) =>
-			prev.map((p) => (p._id === updated._id ? updated : p))
-		);
+		// reload to pick up changes (could be base-event updates or new occurrences)
+		setCurrent((s) => s.clone());
 	}
 
 	function handleDeleted(deleted) {
-		setEvents((prev) => prev.filter((p) => p._id !== deleted._id));
+		// reload events after deletion
+		setCurrent((s) => s.clone());
 	}
 
 	return (
