@@ -33,6 +33,10 @@ export function expandRecurringEvents(events = [], viewStart, viewEnd) {
 		const endDate = recursion.endDate
 			? moment(recursion.endDate).endOf("day")
 			: null;
+		// If no endDate is provided, treat the recurrence as unbounded.
+		// We still limit expansion to the provided view window (`end`) below,
+		// so using a far-future sentinel makes the intent explicit.
+		const effectiveEnd = endDate || moment("9999-12-31").endOf("day");
 		const exceptions = (recursion.exceptions || []).map((d) => toYMD(d));
 
 		// generate occurrences starting from the later of baseDate and viewStart - one week back to cover edge cases
@@ -47,8 +51,8 @@ export function expandRecurringEvents(events = [], viewStart, viewEnd) {
 		}
 
 		while (cur.isSameOrBefore(end, "day")) {
-			// stop if beyond configured endDate
-			if (endDate && cur.isAfter(endDate, "day")) break;
+			// stop if beyond configured endDate (or the effective sentinel)
+			if (cur.isAfter(effectiveEnd, "day")) break;
 
 			const ymd = toYMD(cur);
 
@@ -72,10 +76,9 @@ export function expandRecurringEvents(events = [], viewStart, viewEnd) {
 						baseEventId: ev._id,
 						isRecurrence: true,
 						date: cur.toISOString(),
+						time: ev.time,
 						title: ev.title,
 						visibility: ev.visibility,
-						recursWeekly: ev.recursWeekly,
-						recursionDetails: ev.recursionDetails,
 						location: ev.location,
 						description: ev.description,
 						// include original event for editing/deleting operations

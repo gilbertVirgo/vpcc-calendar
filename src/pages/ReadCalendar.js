@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 
 import CalendarGrid from "../components/CalendarGrid";
 import moment from "moment";
-import { expandRecurringEvents } from "../utils/eventUtils";
 
 export default function Calendar() {
 	const [current, setCurrent] = useState(() => moment());
@@ -33,18 +32,8 @@ export default function Calendar() {
 		return d;
 	}, [startDate, endDate]);
 
-	const eventsByDate = useMemo(() => {
-		// expand recurring events into occurrences within the current calendar window
-		const expanded = expandRecurringEvents(events, startDate, endDate);
-		const map = {};
-		expanded.forEach((ev) => {
-			const d = ev.date ? moment(ev.date).format("YYYY-MM-DD") : null;
-			if (!d) return;
-			if (!map[d]) map[d] = [];
-			map[d].push(ev);
-		});
-		return map;
-	}, [events]);
+	// Pass raw events to CalendarGrid; grouping is handled there now.
+	const eventsByDate = null;
 
 	useEffect(() => {
 		let cancelled = false;
@@ -92,7 +81,7 @@ export default function Calendar() {
 			<CalendarGrid
 				days={days}
 				current={current}
-				eventsByDate={eventsByDate}
+				events={events}
 				onPrev={prevMonth}
 				onNext={nextMonth}
 			/>

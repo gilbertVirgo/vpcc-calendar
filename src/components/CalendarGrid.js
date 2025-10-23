@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useMemo } from "react";
 import moment from "moment";
+import expandRecurringEvents from "../utils/eventUtils";
 
 function formatTime(arrOrObj) {
 	if (!arrOrObj) return null;
@@ -26,13 +27,46 @@ function formatTime(arrOrObj) {
 export default function CalendarGrid({
 	days,
 	current,
-	eventsByDate = {},
+	eventsByDate = null,
+	events = [],
+	expandRecurrences = true,
 	onPrev,
 	onNext,
 	showCreate = false,
 	onCreateClick,
 	onEventClick,
 }) {
+	// Compute grouped events. Priority:
+	// 1) if eventsByDate provided, use it
+	// 2) otherwise take raw events, optionally expand recurrences for the visible window,
+	//    then group by YYYY-MM-DD
+	const grouped = useMemo(() => {
+		if (eventsByDate) return eventsByDate;
+
+		let list = events || [];
+
+		if (expandRecurrences && list && list.length && days && days.length) {
+			const viewStart = days[0].toISOString();
+			const viewEnd = days[days.length - 1].toISOString();
+			try {
+				list = expandRecurringEvents(list, viewStart, viewEnd);
+			} catch (err) {
+				console.error(
+					"[CalendarGrid] expandRecurringEvents error",
+					err
+				);
+			}
+		}
+
+		const map = {};
+		(list || []).forEach((ev) => {
+			if (!ev || !ev.date) return;
+			const k = moment(ev.date).format("YYYY-MM-DD");
+			if (!map[k]) map[k] = [];
+			map[k].push(ev);
+		});
+		return map;
+	}, [eventsByDate, events, days, expandRecurrences]);
 	return (
 		<div className="calendar group--vt--md">
 			<div className="calendar__header group--hz--md">
@@ -58,7 +92,7 @@ export default function CalendarGrid({
 					const key = day.format("YYYY-MM-DD");
 
 					let shouldHideOnMobile =
-						!isCurrentMonth || (!eventsByDate[key] && !showCreate);
+						!isCurrentMonth || (!grouped[key] && !showCreate);
 					return (
 						<div
 							key={key}
@@ -79,9 +113,9 @@ export default function CalendarGrid({
 								{day.format("dddd D MMMM")}
 							</p>
 
-							{eventsByDate[key] && (
+							{grouped[key] && (
 								<div className="calendar__event group--vt--xs">
-									{(eventsByDate[key] || []).map((ev) => (
+									{(grouped[key] || []).map((ev) => (
 										<div
 											key={ev._id}
 											className="calendar__event-item group--vt--xs"

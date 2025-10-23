@@ -91,9 +91,9 @@ exports.handler = async function (event) {
 						recursWeekly: true,
 						date: { $lt: start },
 						$or: [
-							{ endDate: { $exists: false } },
-							{ endDate: null },
-							{ endDate: { $gte: start } },
+							{ "recursionDetails.endDate": { $exists: false } },
+							{ "recursionDetails.endDate": null },
+							{ "recursionDetails.endDate": { $gte: start } },
 						],
 					},
 				],

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-
 import moment from "moment";
 import { useConfirm } from "../contexts/ConfirmModalContext";
 
@@ -20,7 +19,11 @@ function EventForm({
 	const [recursWeekly, setRecursWeekly] = useState(
 		event ? !!event.recursWeekly : false
 	);
-	const [endDate, setEndDate] = useState(event ? event.endDate || "" : "");
+	const [endDate, setEndDate] = useState(
+		event && event.recursionDetails && event.recursionDetails.endDate
+			? moment(event.recursionDetails.endDate).format("YYYY-MM-DD")
+			: ""
+	);
 	const [location, setLocation] = useState(event ? event.location || "" : "");
 	const [description, setDescription] = useState(
 		event ? event.description || "" : ""
@@ -50,7 +53,15 @@ function EventForm({
 			setTitle(event.title || "");
 			setVisibility(event.visibility || "public");
 			setRecursWeekly(!!event.recursWeekly);
-			setEndDate(event.endDate || "");
+			setEndDate(
+				event &&
+					event.recursionDetails &&
+					event.recursionDetails.endDate
+					? moment(event.recursionDetails.endDate).format(
+							"YYYY-MM-DD"
+					  )
+					: ""
+			);
 			setLocation(event.location || "");
 			setDescription(event.description || "");
 			setStartTime(
@@ -121,7 +132,14 @@ function EventForm({
 				if (en) body.time.end = en;
 			}
 
-			if (recursWeekly && endDate) body.recursionDetails = { endDate };
+			// Always include recursionDetails so PUT/POST will update/clear it per model
+			if (recursWeekly) {
+				body.recursionDetails = endDate
+					? { endDate: moment(endDate).toDate(), exceptions: [] }
+					: { exceptions: [] };
+			} else {
+				body.recursionDetails = { endDate: undefined, exceptions: [] };
+			}
 
 			await onSubmit(body);
 		} catch (err) {
@@ -423,7 +441,11 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 						},
 						body: JSON.stringify({
 							$addToSet: {
-								"recursionDetails.exceptions": event.date,
+								"recursionDetails.exceptions": moment(
+									event.date
+								)
+									.startOf("day")
+									.toDate(),
 							},
 						}),
 					}
@@ -444,6 +466,8 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 				onClose && onClose();
 				return;
 			} else if (choice === "all") {
+				// normalize occurrence day and set both exception and endDate (one week before)
+				const occurrenceDay = moment(event.date).startOf("day");
 				const res = await fetch(
 					`/.netlify/functions/events?id=${event.baseEventId}`,
 					{
@@ -455,7 +479,17 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 								: {}),
 						},
 						body: JSON.stringify({
-							recursionDetails: { endDate: event.date },
+							$addToSet: {
+								"recursionDetails.exceptions":
+									occurrenceDay.toDate(),
+							},
+							$set: {
+								"recursionDetails.endDate": occurrenceDay
+									.clone()
+									.subtract(7, "days")
+									.endOf("day")
+									.toDate(),
+							},
 						}),
 					}
 				);

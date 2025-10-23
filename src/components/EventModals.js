@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import moment from "moment";
 
 import { useConfirm } from "../contexts/ConfirmModalContext";
 
@@ -58,7 +59,12 @@ export function CreateEventForm({ date, onCreate, onClose }) {
 				date: date.toDate(),
 				visibility,
 				recursWeekly,
-				endDate: endDate || undefined,
+				// recursionDetails follows the server Event model
+				recursionDetails: recursWeekly
+					? endDate
+						? { endDate: moment(endDate).toDate(), exceptions: [] }
+						: { exceptions: [] }
+					: undefined,
 				time: undefined,
 				location,
 				description,
@@ -214,7 +220,11 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 	const [recursWeekly, setRecursWeekly] = useState(
 		event ? !!event.recursWeekly : false
 	);
-	const [endDate, setEndDate] = useState(event ? event.endDate || "" : "");
+	const [endDate, setEndDate] = useState(
+		event && event.recursionDetails && event.recursionDetails.endDate
+			? moment(event.recursionDetails.endDate).format("YYYY-MM-DD")
+			: ""
+	);
 	const [location, setLocation] = useState(event ? event.location : "");
 	const [description, setDescription] = useState(
 		event ? event.description : ""
@@ -243,7 +253,15 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 			setTitle(event.title || "");
 			setVisibility(event.visibility || "public");
 			setRecursWeekly(!!event.recursWeekly);
-			setEndDate(event.endDate || "");
+			setEndDate(
+				event &&
+					event.recursionDetails &&
+					event.recursionDetails.endDate
+					? moment(event.recursionDetails.endDate).format(
+							"YYYY-MM-DD"
+					  )
+					: ""
+			);
 			setLocation(event.location || "");
 			setDescription(event.description || "");
 			setStartTime(
@@ -355,6 +373,46 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 				return;
 			}
 
+			// Build update body, include recursionDetails per model
+			const updateBody = {
+				title,
+				visibility,
+				recursWeekly,
+				location,
+				description,
+			};
+
+			const timeObj = (() => {
+				const s = parseTimeToArray(startTime);
+				const en = parseTimeToArray(endTime);
+				if (!s && !en) return undefined;
+				const t = {};
+				if (s) t.start = s;
+				if (en) t.end = en;
+				return t;
+			})();
+			if (timeObj) updateBody.time = timeObj;
+
+			// Handle recursionDetails according to recursWeekly and endDate input
+			if (recursWeekly) {
+				// preserve existing exceptions if present on base event, otherwise leave undefined
+				const existingExceptions =
+					event &&
+					event.recursionDetails &&
+					event.recursionDetails.exceptions
+						? event.recursionDetails.exceptions
+						: undefined;
+				updateBody.recursionDetails = {};
+				if (endDate)
+					updateBody.recursionDetails.endDate =
+						moment(endDate).toDate();
+				if (existingExceptions)
+					updateBody.recursionDetails.exceptions = existingExceptions;
+			} else {
+				// If user turned off recurrence, clear recursionDetails
+				updateBody.recursionDetails = { endDate: null, exceptions: [] };
+			}
+
 			const res = await fetch(
 				`/.netlify/functions/events?id=${event._id}`,
 				{
@@ -363,22 +421,7 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 						"Content-Type": "application/json",
 						...(token ? { Authorization: `Bearer ${token}` } : {}),
 					},
-					body: JSON.stringify({
-						title,
-						visibility,
-						recursWeekly,
-						location,
-						description,
-						time: (() => {
-							const s = parseTimeToArray(startTime);
-							const en = parseTimeToArray(endTime);
-							if (!s && !en) return undefined;
-							const t = {};
-							if (s) t.start = s;
-							if (en) t.end = en;
-							return t;
-						})(),
-					}),
+					body: JSON.stringify(updateBody),
 				}
 			);
 
@@ -433,7 +476,11 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 							},
 							body: JSON.stringify({
 								$addToSet: {
-									"recursionDetails.exceptions": event.date,
+									"recursionDetails.exceptions": moment(
+										event.date
+									)
+										.startOf("day")
+										.toDate(),
 								},
 							}),
 						}
@@ -446,7 +493,47 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 					onClose && onClose();
 					return;
 				} else if (choice === "all") {
-					// Set base event's endDate to this date (so future occurrences are removed)
+					// If the base event's own date is the same day as this occurrence,
+					// deleting all future occurrences should remove the base event itself.
+					if (
+						event.baseEvent &&
+						moment(event.baseEvent.date).isSame(event.date, "day")
+					) {
+						const delRes = await fetch(
+							`/.netlify/functions/events?id=${event.baseEventId}`,
+							{
+								method: "DELETE",
+								headers: {
+									...(token
+										? { Authorization: `Bearer ${token}` }
+										: {}),
+								},
+							}
+						);
+						if (delRes.status !== 204) {
+							let txt;
+							try {
+								const j = await delRes.json();
+								txt = j.error || JSON.stringify(j);
+							} catch (e) {
+								txt = await delRes
+									.text()
+									.catch(() => "(no body)");
+							}
+							throw new Error(
+								`Failed to delete base event: ${delRes.status} - ${txt}`
+							);
+						}
+						onDeleted && onDeleted(event);
+						onClose && onClose();
+						return;
+					}
+
+					// Otherwise set base event's endDate to one week before this date
+					// (end of that day) and add this occurrence as an exception.
+					// Use startOf('day') to normalize dates and $set/$addToSet
+					// so Mongoose treats this as an operator update.
+					const occurrenceDay = moment(event.date).startOf("day");
 					const res = await fetch(
 						`/.netlify/functions/events?id=${event.baseEventId}`,
 						{
@@ -458,12 +545,27 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 									: {}),
 							},
 							body: JSON.stringify({
-								recursionDetails: { endDate: event.date },
+								$addToSet: {
+									"recursionDetails.exceptions":
+										occurrenceDay.toDate(),
+								},
+								$set: {
+									// set endDate to the end of the day one week before
+									"recursionDetails.endDate": occurrenceDay
+										.clone()
+										.subtract(7, "days")
+										.endOf("day")
+										.toDate(),
+								},
 							}),
 						}
 					);
+
 					if (!res.ok)
-						throw new Error("Failed to set base event endDate");
+						throw new Error(
+							"Failed to update base event for deletion"
+						);
+
 					onDeleted && onDeleted(event);
 					onClose && onClose();
 					return;
