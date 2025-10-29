@@ -21,7 +21,19 @@ function App() {
 			<main className="group--vt--lg">
 				<ul className="nav__wrapper">
 					<li>
-						<Link to="/login">Login</Link>
+						{user ? (
+							<Link
+								to="/"
+								onClick={() => {
+									localStorage.removeItem("token");
+									window.location.href = "/";
+								}}
+							>
+								Logout
+							</Link>
+						) : (
+							<Link to="/login">Login</Link>
+						)}
 					</li>
 				</ul>
 
