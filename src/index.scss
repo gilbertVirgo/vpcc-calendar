@@ -100,7 +100,8 @@ button,
 	border: none;
 	background: none;
 	padding: 0.5rem 1rem;
-	background-color: #cccccc;
+	border-radius: 0.5rem;
+	background-color: #dddddd;
 }
 
 /* Calendar grid basics (minimal styling) */
@@ -135,6 +136,7 @@ button,
 
 	padding: 0.5rem;
 	box-sizing: border-box;
+	border-radius: 0.75rem;
 
 	&--not-current-month {
 		opacity: 0.5;
@@ -143,6 +145,7 @@ button,
 
 .calendar__event-item {
 	padding: 0.5rem;
+	border-radius: 0.25rem;
 	box-sizing: border-box;
 	background-color: #dddddd;
 }

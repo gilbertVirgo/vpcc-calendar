@@ -69,6 +69,10 @@ function App() {
 						}}
 					/>
 				</Switch>
+				<p>
+					Designed by{" "}
+					<a href="mailto:gilbertjvirgo@gmail.com">Gilbert Virgo</a>
+				</p>
 			</main>
 		</Router>
 	);

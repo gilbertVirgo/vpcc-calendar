@@ -97,17 +97,32 @@ export default function CalendarGrid({
 		});
 		return map;
 	}, [eventsByDate, events, days, expandRecurrences]);
+
+	// prevent navigating to months before current real-world month
+	const todayStart = moment().startOf("month");
+	const canGoPrev =
+		current && current.clone().startOf("month").isAfter(todayStart);
+
 	return (
 		<div className="calendar group--vt--md">
 			<div className="calendar__header group--hz--md">
-				<button onClick={onPrev} aria-label="Previous month">
-					◀
+				<button
+					onClick={() => canGoPrev && onPrev && onPrev()}
+					aria-label="Previous month"
+					disabled={!canGoPrev}
+					title={
+						canGoPrev
+							? "Previous month"
+							: "Cannot navigate to past months"
+					}
+				>
+					←
 				</button>
 				<h3 className="calendar__header-title">
 					{current.format("MMMM YYYY")}
 				</h3>
 				<button onClick={onNext} aria-label="Next month">
-					▶
+					→
 				</button>
 			</div>
 
@@ -131,7 +146,7 @@ export default function CalendarGrid({
 									? "calendar__cell--not-current-month"
 									: ""
 							}
-							${shouldHideOnMobile ? "hide--sm-down" : ""}`}
+						${shouldHideOnMobile ? "hide--sm-down" : ""}`}
 						>
 							<p
 								className="hide--sm-down"
