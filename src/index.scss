@@ -214,3 +214,9 @@ input[type="checkbox"] {
 	height: 1.5rem;
 	scale: 1.25;
 }
+
+.nav__wrapper {
+	@extend .group--hz--md;
+
+	list-style-type: none;
+}

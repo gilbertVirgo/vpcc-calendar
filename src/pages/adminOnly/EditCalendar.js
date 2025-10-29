@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import CalendarGrid from "../../components/CalendarGrid";
 import moment from "moment";
 import { useModal } from "../../contexts/ModalContext";
+import apiFetch from "../../utils/apiFetch";
 
 // Using ModalContext and EventForm components
 
@@ -49,7 +50,7 @@ export default function EditCalendar() {
 				const headers = token
 					? { Authorization: `Bearer ${token}` }
 					: {};
-				const res = await fetch(
+				const res = await apiFetch(
 					`/.netlify/functions/events?year=${y}&month=${m}`,
 					{ headers }
 				);

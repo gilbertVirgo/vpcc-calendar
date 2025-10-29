@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 
 import { useError } from "../contexts/ErrorContext";
-import { useHistory } from "react-router-dom";
+import { useHistory, useLocation } from "react-router-dom";
 import { useUser } from "../contexts/UserContext";
 
 export default function Login() {
@@ -12,7 +12,11 @@ export default function Login() {
 	const [success, setSuccess] = useState(null);
 
 	const history = useHistory();
+	const location = useLocation();
 	const { refreshUser } = useUser();
+	// read returnTo from query params (e.g. /login?returnTo=/admin?page=1)
+	const params = new URLSearchParams(location.search);
+	const returnToParam = params.get("returnTo") || "/";
 
 	async function handleSubmit(e) {
 		e.preventDefault();
@@ -29,7 +33,7 @@ export default function Login() {
 				setError(data.error || "Login failed");
 				return;
 			}
-			// store token and redirect to calendar
+			// store token and redirect to requested page (if safe)
 			if (data.token) {
 				localStorage.setItem("token", data.token);
 				refreshUser();
@@ -37,7 +41,12 @@ export default function Login() {
 			setSuccess(
 				`Logged in as ${data.user.username} (${data.user.role})`
 			);
-			history.push("/");
+			// Only allow internal redirects starting with '/'
+			if (returnToParam && returnToParam.startsWith("/")) {
+				history.push(returnToParam);
+			} else {
+				history.push("/");
+			}
 			setPassword("");
 		} catch (err) {
 			console.error(err);

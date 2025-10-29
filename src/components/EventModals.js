@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import moment from "moment";
 
 import { useConfirm } from "../contexts/ConfirmModalContext";
+import apiFetch from "../utils/apiFetch";
 
 export function CreateEventForm({ date, onCreate, onClose }) {
 	const [title, setTitle] = useState("");
@@ -78,7 +79,7 @@ export function CreateEventForm({ date, onCreate, onClose }) {
 				if (en) body.time.end = en;
 			}
 
-			const res = await fetch("/.netlify/functions/events", {
+			const res = await apiFetch("/.netlify/functions/events", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -318,7 +319,7 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 				// patch base event to add exception
 				const baseId = event.baseEventId;
 				const exceptionDate = event.date;
-				const addExceptionRes = await fetch(
+				const addExceptionRes = await apiFetch(
 					`/.netlify/functions/events?id=${baseId}`,
 					{
 						method: "PUT",
@@ -340,7 +341,7 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 						"Failed to update base event for exception"
 					);
 				// create new single event for edited occurrence
-				const createRes = await fetch("/.netlify/functions/events", {
+				const createRes = await apiFetch("/.netlify/functions/events", {
 					method: "POST",
 					headers: {
 						"Content-Type": "application/json",
@@ -413,7 +414,7 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 				updateBody.recursionDetails = { endDate: null, exceptions: [] };
 			}
 
-			const res = await fetch(
+			const res = await apiFetch(
 				`/.netlify/functions/events?id=${event._id}`,
 				{
 					method: "PUT",
@@ -464,7 +465,7 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 				const token = localStorage.getItem("token");
 				if (choice === "one") {
 					// Add this date to base event's exceptions
-					const res = await fetch(
+					const res = await apiFetch(
 						`/.netlify/functions/events?id=${event.baseEventId}`,
 						{
 							method: "PUT",
@@ -499,7 +500,7 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 						event.baseEvent &&
 						moment(event.baseEvent.date).isSame(event.date, "day")
 					) {
-						const delRes = await fetch(
+						const delRes = await apiFetch(
 							`/.netlify/functions/events?id=${event.baseEventId}`,
 							{
 								method: "DELETE",
@@ -534,7 +535,7 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 					// Use startOf('day') to normalize dates and $set/$addToSet
 					// so Mongoose treats this as an operator update.
 					const occurrenceDay = moment(event.date).startOf("day");
-					const res = await fetch(
+					const res = await apiFetch(
 						`/.netlify/functions/events?id=${event.baseEventId}`,
 						{
 							method: "PUT",
@@ -585,7 +586,7 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 		setLoading(true);
 		try {
 			const token = localStorage.getItem("token");
-			const res = await fetch(
+			const res = await apiFetch(
 				`/.netlify/functions/events?id=${event._id}`,
 				{
 					method: "DELETE",

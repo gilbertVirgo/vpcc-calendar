@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 
 import CalendarGrid from "../components/CalendarGrid";
 import moment from "moment";
+import apiFetch from "../utils/apiFetch";
 
 export default function Calendar() {
 	const [current, setCurrent] = useState(() => moment());
@@ -45,7 +46,7 @@ export default function Calendar() {
 				const headers = token
 					? { Authorization: `Bearer ${token}` }
 					: {};
-				const res = await fetch(
+				const res = await apiFetch(
 					`/.netlify/functions/events?year=${y}&month=${m}`,
 					{ headers }
 				);

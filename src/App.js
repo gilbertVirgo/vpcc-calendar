@@ -19,6 +19,12 @@ function App() {
 	return (
 		<Router>
 			<main className="group--vt--lg">
+				<ul className="nav__wrapper">
+					<li>
+						<Link to="/login">Login</Link>
+					</li>
+				</ul>
+
 				<ErrorBanner />
 
 				<Switch>
@@ -26,7 +32,8 @@ function App() {
 						exact
 						path="/"
 						render={() => {
-							if (!user) return <Redirect to="/login" />;
+							// If not logged in, show the public ReadCalendar view.
+							if (!user) return <ReadCalendar />;
 							return user.role === "admin" ? (
 								<EditCalendar />
 							) : (

@@ -65,6 +65,36 @@ export default function CalendarGrid({
 			if (!map[k]) map[k] = [];
 			map[k].push(ev);
 		});
+
+		// Sort events in each day by start time (earlier first). Events without a
+		// start time are placed after timed events.
+		Object.keys(map).forEach((k) => {
+			map[k].sort((a, b) => {
+				function startMinutes(ev) {
+					const t = ev && (ev.time || ev.start);
+					let arr = null;
+					if (!t) return Number.POSITIVE_INFINITY;
+					if (Array.isArray(t)) arr = t;
+					else if (Array.isArray(t.start)) arr = t.start;
+					else return Number.POSITIVE_INFINITY;
+					const h = Number(arr[0]) || 0;
+					const m = Number(arr[1]) || 0;
+					if (Number.isNaN(h) || Number.isNaN(m))
+						return Number.POSITIVE_INFINITY;
+					return h * 60 + m;
+				}
+
+				const sa = startMinutes(a);
+				const sb = startMinutes(b);
+				if (sa === sb) {
+					// Tie-breaker: shorter title first, then id
+					if (a.title && b.title)
+						return a.title.localeCompare(b.title);
+					return (a._id || "").localeCompare(b._id || "");
+				}
+				return sa - sb;
+			});
+		});
 		return map;
 	}, [eventsByDate, events, days, expandRecurrences]);
 	return (

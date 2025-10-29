@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import moment from "moment";
 import { useConfirm } from "../contexts/ConfirmModalContext";
+import apiFetch from "../utils/apiFetch";
 
 // Shared Event Form Component
 function EventForm({
@@ -290,7 +291,7 @@ export function CreateEventForm({ date, onCreate, onClose }) {
 			date: date.toDate(),
 		};
 
-		const res = await fetch("/.netlify/functions/events", {
+		const res = await apiFetch("/.netlify/functions/events", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -330,73 +331,142 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 	const confirm = useConfirm();
 	async function handleSubmit(data) {
 		const token = localStorage.getItem("token");
-		// If this is a recurrence occurrence, we need to add an exception to the base
-		// event and then create a new single event with the edited details.
+		// If this is a recurrence occurrence, ask the user whether to apply
+		// changes only to this occurrence or to this and all future occurrences.
 		if (event.isRecurrence && event.baseEventId) {
-			// add exception to base event
-			const baseRes = await fetch(
-				`/.netlify/functions/events?id=${event.baseEventId}`,
-				{
-					method: "PUT",
+			const choice = await confirm({
+				title: "Edit recurring event",
+				message:
+					"Apply changes only to this occurrence, or to this and all future occurrences?",
+				cancelText: "Cancel",
+				choices: [
+					{ label: "Only this occurrence", value: "one" },
+					{
+						label: "This and all future occurrences",
+						value: "future",
+					},
+				],
+			});
+			if (!choice) return;
+
+			const baseId = event.baseEventId;
+			const occurrenceDay = moment(event.date).startOf("day");
+
+			if (choice === "one") {
+				// Add exception to base, then create a single event with edited details
+				const addExceptionRes = await apiFetch(
+					`/.netlify/functions/events?id=${baseId}`,
+					{
+						method: "PUT",
+						headers: {
+							"Content-Type": "application/json",
+							...(token
+								? { Authorization: `Bearer ${token}` }
+								: {}),
+						},
+						body: JSON.stringify({
+							$addToSet: {
+								"recursionDetails.exceptions":
+									occurrenceDay.toDate(),
+							},
+						}),
+					}
+				);
+				if (!addExceptionRes.ok)
+					throw new Error("Failed to update base event");
+
+				const createRes = await apiFetch("/.netlify/functions/events", {
+					method: "POST",
 					headers: {
 						"Content-Type": "application/json",
 						...(token ? { Authorization: `Bearer ${token}` } : {}),
 					},
 					body: JSON.stringify({
-						$addToSet: {
-							"recursionDetails.exceptions": event.date,
-						},
+						...data,
+						date: event.date,
+						recursWeekly: false,
 					}),
-				}
-			);
-			if (!baseRes.ok) {
-				let txt;
-				try {
-					const j = await baseRes.json();
-					txt = j.error || JSON.stringify(j);
-				} catch (e) {
-					txt = await baseRes.text().catch(() => "(no body)");
-				}
-				throw new Error(
-					`Failed to update base event: ${baseRes.status} - ${txt}`
-				);
+				});
+				if (!createRes.ok)
+					throw new Error("Failed to create edited occurrence");
+				const created = await createRes.json();
+				onSaved && onSaved(created.event);
+				onClose && onClose();
+				return;
 			}
 
-			// create new single event with edited details
-			const createRes = await fetch(`/.netlify/functions/events`, {
-				method: "POST",
+			if (choice === "future") {
+				// Split the series: end the original base before the occurrence,
+				// and create a new recurring event starting at the occurrence with the updated data.
+				const updateBaseRes = await apiFetch(
+					`/.netlify/functions/events?id=${baseId}`,
+					{
+						method: "PUT",
+						headers: {
+							"Content-Type": "application/json",
+							...(token
+								? { Authorization: `Bearer ${token}` }
+								: {}),
+						},
+						body: JSON.stringify({
+							$addToSet: {
+								"recursionDetails.exceptions":
+									occurrenceDay.toDate(),
+							},
+							$set: {
+								"recursionDetails.endDate": occurrenceDay
+									.clone()
+									.subtract(7, "days")
+									.endOf("day")
+									.toDate(),
+							},
+						}),
+					}
+				);
+				if (!updateBaseRes.ok)
+					throw new Error(
+						"Failed to update original recurring event"
+					);
+
+				// Create new recurring event starting at occurrence date. Use data supplied by form
+				const newEventBody = {
+					...data,
+					date: occurrenceDay.toDate(),
+					recursWeekly: true,
+				};
+				const createNewRes = await apiFetch(
+					"/.netlify/functions/events",
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							...(token
+								? { Authorization: `Bearer ${token}` }
+								: {}),
+						},
+						body: JSON.stringify(newEventBody),
+					}
+				);
+				if (!createNewRes.ok)
+					throw new Error("Failed to create new recurring event");
+				const createdNew = await createNewRes.json();
+				onSaved && onSaved(createdNew.event);
+				onClose && onClose();
+				return;
+			}
+		}
+
+		const res = await apiFetch(
+			`/.netlify/functions/events?id=${event._id}`,
+			{
+				method: "PUT",
 				headers: {
 					"Content-Type": "application/json",
 					...(token ? { Authorization: `Bearer ${token}` } : {}),
 				},
-				body: JSON.stringify({ ...data, date: event.date }),
-			});
-			if (!createRes.ok) {
-				let txt;
-				try {
-					const j = await createRes.json();
-					txt = j.error || JSON.stringify(j);
-				} catch (e) {
-					txt = await createRes.text().catch(() => "(no body)");
-				}
-				throw new Error(
-					`Failed to create edited occurrence: ${createRes.status} - ${txt}`
-				);
+				body: JSON.stringify(data),
 			}
-			const created = await createRes.json();
-			onSaved && onSaved(created.event);
-			onClose && onClose();
-			return;
-		}
-
-		const res = await fetch(`/.netlify/functions/events?id=${event._id}`, {
-			method: "PUT",
-			headers: {
-				"Content-Type": "application/json",
-				...(token ? { Authorization: `Bearer ${token}` } : {}),
-			},
-			body: JSON.stringify(data),
-		});
+		);
 		if (!res.ok) {
 			let txt;
 			try {
@@ -429,7 +499,7 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 			});
 			if (!choice) return;
 			if (choice === "one") {
-				const res = await fetch(
+				const res = await apiFetch(
 					`/.netlify/functions/events?id=${event.baseEventId}`,
 					{
 						method: "PUT",
@@ -468,7 +538,7 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 			} else if (choice === "all") {
 				// normalize occurrence day and set both exception and endDate (one week before)
 				const occurrenceDay = moment(event.date).startOf("day");
-				const res = await fetch(
+				const res = await apiFetch(
 					`/.netlify/functions/events?id=${event.baseEventId}`,
 					{
 						method: "PUT",
@@ -513,12 +583,15 @@ export function EditEventForm({ event, onSaved, onDeleted, onClose }) {
 			}
 		}
 
-		const res = await fetch(`/.netlify/functions/events?id=${event._id}`, {
-			method: "DELETE",
-			headers: {
-				...(token ? { Authorization: `Bearer ${token}` } : {}),
-			},
-		});
+		const res = await apiFetch(
+			`/.netlify/functions/events?id=${event._id}`,
+			{
+				method: "DELETE",
+				headers: {
+					...(token ? { Authorization: `Bearer ${token}` } : {}),
+				},
+			}
+		);
 		if (res.status !== 204) {
 			let txt;
 			try {
