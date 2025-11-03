@@ -118,9 +118,9 @@ export default function CalendarGrid({
 				>
 					←
 				</button>
-				<h3 className="calendar__header-title">
+				<h2 className="calendar__header-title">
 					{current.format("MMMM YYYY")}
-				</h3>
+				</h2>
 				<button onClick={onNext} aria-label="Next month">
 					→
 				</button>

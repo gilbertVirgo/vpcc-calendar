@@ -5,8 +5,8 @@ import { useHistory, useLocation } from "react-router-dom";
 import { useUser } from "../contexts/UserContext";
 
 export default function Login() {
-	// username is hidden from the UI but exists in state; default 'general'
-	const [username, setUsername] = useState("general");
+	// username is hidden from the UI and set to admin by default
+	const [username, setUsername] = useState("admin");
 	const [password, setPassword] = useState("");
 	const { error, setError, clearError } = useError();
 	const [success, setSuccess] = useState(null);
@@ -54,44 +54,29 @@ export default function Login() {
 		}
 	}
 
-	function toggleRole(e) {
-		e.preventDefault();
-		setUsername((u) => (u === "admin" ? "general" : "admin"));
-	}
-
 	return (
-		<div>
+		<>
 			<h2>Login</h2>
 
 			<form onSubmit={handleSubmit}>
 				{/* hidden username field */}
 				<input type="hidden" name="username" value={username} />
 
-				<div>
-					<label>
-						Password
-						<input
-							type="password"
-							name="password"
-							value={password}
-							onChange={(e) => setPassword(e.target.value)}
-							required
-						/>
-					</label>
-				</div>
+				<label>
+					Password
+					<input
+						type="password"
+						name="password"
+						value={password}
+						onChange={(e) => setPassword(e.target.value)}
+						required
+					/>
+				</label>
 
 				<div>
 					<button type="submit">Log in</button>
 				</div>
 			</form>
-
-			<div style={{ marginTop: "0.5rem" }}>
-				<a href="#" onClick={toggleRole}>
-					{username === "admin"
-						? "Log in as a general user"
-						: "Log in as admin"}
-				</a>
-			</div>
-		</div>
+		</>
 	);
 }

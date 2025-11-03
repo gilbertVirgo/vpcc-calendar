@@ -66,6 +66,22 @@ $breakpoints: (
 	}
 }
 
+/* Color variables */
+$color--darkest: hsl(0, 0%, 17%);
+$color--darker: hsl(8, 6%, 27.1%);
+$color--dark: hsl(15, 12.5%, 37.3%);
+$color--medium-dark: hsl(22.5, 18.8%, 47.4%);
+$color--neutral: hsl(30, 25%, 57.5%);
+$color--medium-light: hsl(37.5, 31.3%, 67.6%);
+$color--light: hsl(45, 37.5%, 77.8%);
+$color--lighter: hsl(52.5, 43.8%, 87.9%);
+$color--lightest: hsl(60, 50%, 98%);
+
+$color--orange: hsl(28, 100%, 60%);
+$color--orange-dark: hsl(28, 100%, 45%);
+$color--eggshell: hsl(60, 50%, 98%);
+$color--eggshell-transparent: hsla(60, 50%, 98%, 0);
+
 * {
 	font: unset;
 	font-family: "area-inktrap", system-ui, -apple-system, BlinkMacSystemFont,
@@ -75,8 +91,23 @@ $breakpoints: (
 	padding: unset;
 }
 
+a {
+	text-decoration: none;
+	color: $color--orange-dark;
+}
+
+body,
+html {
+	background-color: $color--lightest;
+	color: $color--darkest;
+}
+
 main {
 	padding: 4rem 2rem;
+}
+
+input {
+	max-width: 60ch;
 }
 
 p {
@@ -88,6 +119,11 @@ p {
 	}
 }
 
+h2 {
+	font-size: 1.5rem;
+	font-weight: bold;
+}
+
 h3 {
 	font-size: 1.125rem;
 	font-weight: bold;
@@ -97,11 +133,11 @@ button,
 .button {
 	cursor: pointer;
 	appearance: none;
-	border: none;
+	border: 2px solid $color--orange;
 	background: none;
 	padding: 0.5rem 1rem;
-	border-radius: 0.5rem;
-	background-color: #dddddd;
+	border-radius: 1rem;
+	background-color: $color--lightest;
 }
 
 /* Calendar grid basics (minimal styling) */
@@ -132,7 +168,7 @@ button,
 }
 
 .calendar__cell {
-	background-color: #eeeeee;
+	border: 2px solid $color--lighter;
 
 	padding: 0.5rem;
 	box-sizing: border-box;
@@ -147,7 +183,7 @@ button,
 	padding: 0.5rem;
 	border-radius: 0.25rem;
 	box-sizing: border-box;
-	background-color: #dddddd;
+	background-color: $color--lighter;
 }
 
 /* Responsive hide utilities
