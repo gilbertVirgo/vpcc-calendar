@@ -127,6 +127,7 @@ h2 {
 h3 {
 	font-size: 1.125rem;
 	font-weight: bold;
+	line-height: 125%;
 }
 
 button,
@@ -228,6 +229,8 @@ button,
 	padding: 1rem;
 	width: 100%;
 	max-width: map-get($breakpoints, sm);
+	max-height: calc(100% - 1rem);
+	overflow-y: scroll;
 }
 
 form {

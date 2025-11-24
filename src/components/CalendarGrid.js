@@ -163,7 +163,7 @@ export default function CalendarGrid({
 									{(grouped[key] || []).map((ev) => (
 										<div
 											key={ev._id}
-											className="calendar__event-item group--vt--xs"
+											className="calendar__event-item group--vt--sm"
 											role={
 												onEventClick
 													? "button"
