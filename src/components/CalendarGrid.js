@@ -129,7 +129,7 @@ export default function CalendarGrid({
 			<div className="calendar__grid">
 				{Array.from({ length: 7 }).map((_, i) => (
 					<div key={i} className="calendar__week-name hide--sm-down">
-						{moment().day(i).format("ddd")}
+						{moment().isoWeekday(i + 1).format("ddd")}
 					</div>
 				))}
 				{days.map((day) => {

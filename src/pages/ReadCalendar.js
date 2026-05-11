@@ -15,11 +15,11 @@ export default function Calendar() {
 	const endOfMonth = useMemo(() => current.clone().endOf("month"), [current]);
 
 	const startDate = useMemo(
-		() => startOfMonth.clone().startOf("week"),
+		() => startOfMonth.clone().startOf("isoWeek"),
 		[startOfMonth]
 	);
 	const endDate = useMemo(
-		() => endOfMonth.clone().endOf("week"),
+		() => endOfMonth.clone().endOf("isoWeek"),
 		[endOfMonth]
 	);
 
