@@ -53,7 +53,7 @@ export default function CalendarGrid({
 			} catch (err) {
 				console.error(
 					"[CalendarGrid] expandRecurringEvents error",
-					err
+					err,
 				);
 			}
 		}
@@ -129,7 +129,9 @@ export default function CalendarGrid({
 			<div className="calendar__grid">
 				{Array.from({ length: 7 }).map((_, i) => (
 					<div key={i} className="calendar__week-name hide--sm-down">
-						{moment().isoWeekday(i + 1).format("ddd")}
+						{moment()
+							.isoWeekday(i + 1)
+							.format("ddd")}
 					</div>
 				))}
 				{days.map((day) => {
@@ -197,14 +199,14 @@ export default function CalendarGrid({
 														ev.time ||
 															ev.start ||
 															(ev.time &&
-																ev.time.start)
+																ev.time.start),
 													)}
 													-
 													{formatTime(
 														ev.time?.end ||
 															ev.end ||
 															(ev.time &&
-																ev.time.end)
+																ev.time.end),
 													)}
 												</p>
 											)}

@@ -10,17 +10,17 @@ export default function Calendar() {
 
 	const startOfMonth = useMemo(
 		() => current.clone().startOf("month"),
-		[current]
+		[current],
 	);
 	const endOfMonth = useMemo(() => current.clone().endOf("month"), [current]);
 
 	const startDate = useMemo(
 		() => startOfMonth.clone().startOf("isoWeek"),
-		[startOfMonth]
+		[startOfMonth],
 	);
 	const endDate = useMemo(
 		() => endOfMonth.clone().endOf("isoWeek"),
-		[endOfMonth]
+		[endOfMonth],
 	);
 
 	const days = useMemo(() => {
@@ -48,7 +48,7 @@ export default function Calendar() {
 					: {};
 				const res = await apiFetch(
 					`/.netlify/functions/events?year=${y}&month=${m}`,
-					{ headers }
+					{ headers },
 				);
 				if (!res.ok) {
 					console.error("Failed to load events", res.status);
