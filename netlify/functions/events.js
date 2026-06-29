@@ -69,9 +69,14 @@ exports.handler = async function (event) {
 				};
 			}
 			const start = moment({ year: year, month: month - 1, day: 1 })
+				.subtract(7, "days")
 				.startOf("day")
 				.toDate();
-			const end = moment(start).endOf("month").endOf("day").toDate();
+			const end = moment({ year: year, month: month - 1, day: 1 })
+				.endOf("month")
+				.add(7, "days")
+				.endOf("day")
+				.toDate();
 			console.log("[events] query range", {
 				start: start.toISOString(),
 				end: end.toISOString(),
