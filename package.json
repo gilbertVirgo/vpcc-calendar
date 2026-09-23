@@ -23,6 +23,7 @@
 		"start": "react-scripts start",
 		"build": "react-scripts build",
 		"test": "react-scripts test",
+		"test:functions": "node --test netlify/functions/utils/*.test.js",
 		"test:db-disconnect": "node scripts/test-db-disconnect.js",
 		"eject": "react-scripts eject"
 	},
