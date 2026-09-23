@@ -2,6 +2,7 @@ const { connect } = require("./utils/db");
 const Event = require("./models/Event");
 const moment = require("moment");
 const { requireAuth } = require("./utils/requireAuth");
+const { getCookie } = require("./utils/cookies");
 
 exports.handler = async function (event) {
 	try {
@@ -16,21 +17,27 @@ exports.handler = async function (event) {
 		let role = null;
 		const method = event.httpMethod;
 
-		// If a token is present, validate and set role. For non-GET methods
-		// authentication is mandatory.
+		// If a token (bearer header or hub session cookie) is present, validate
+		// and set role. For non-GET methods authentication is mandatory.
 		const hasAuthHeader =
 			event.headers &&
 			(event.headers.Authorization || event.headers.authorization);
+		const hasSessionCookie =
+			event.headers &&
+			!!getCookie(
+				event.headers.cookie || event.headers.Cookie,
+				"vpcc_session"
+			);
 
 		if (method !== "GET") {
 			const auth = await requireAuth(event);
 			if (!auth.ok) return auth.response;
 			role = auth.user && auth.user.role;
 			console.log("[events] authenticated user role", { role });
-		} else if (hasAuthHeader) {
+		} else if (hasAuthHeader || hasSessionCookie) {
 			const auth = await requireAuth(event);
 			if (auth.ok) role = auth.user && auth.user.role;
-			console.log("[events] optional auth header present, role set to", {
+			console.log("[events] optional auth present, role set to", {
 				role,
 			});
 		}
