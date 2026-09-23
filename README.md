@@ -1,5 +1,15 @@
 # Getting Started with Create React App
 
+## Auth
+
+Login is handled by the shared auth hub (auth.vpcc.church). `/login` redirects there
+with `?returnTo=`; the hub sets a `vpcc_session` cookie on `.vpcc.church`, which the
+functions accept when no `Authorization: Bearer` header is sent. The legacy
+localStorage token flow still works.
+
+- `REACT_APP_AUTH_HUB_URL` (optional) — hub base URL, default `https://auth.vpcc.church`.
+- `npm run test:functions` — runs the Netlify function unit tests (`node --test`).
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts

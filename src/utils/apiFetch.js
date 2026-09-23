@@ -1,12 +1,15 @@
+export const AUTH_HUB_URL =
+	process.env.REACT_APP_AUTH_HUB_URL || "https://auth.vpcc.church";
+
 export default async function apiFetch(input, init) {
-	const res = await fetch(input, init);
+	// Send the hub's vpcc_session cookie; callers still add a Bearer header
+	// themselves when a localStorage token exists.
+	const res = await fetch(input, { credentials: "include", ...init });
 	if (res.status === 401 || res.status === 403) {
-		// Immediately redirect to login for unauthorized responses
-		// Preserve current location so user can be redirected back after login if desired
-		const returnTo = encodeURIComponent(
-			window.location.pathname + window.location.search
-		);
-		window.location.href = `/login?returnTo=${returnTo}`;
+		// Send the user to the auth hub, which redirects back here after login
+		window.location.href = `${AUTH_HUB_URL}/?returnTo=${encodeURIComponent(
+			window.location.href
+		)}`;
 		// Throw to stop further handling
 		throw new Error("Unauthorized");
 	}

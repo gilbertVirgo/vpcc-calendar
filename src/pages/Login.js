@@ -1,82 +1,19 @@
-import React, { useState } from "react";
-
-import { useError } from "../contexts/ErrorContext";
-import { useHistory, useLocation } from "react-router-dom";
-import { useUser } from "../contexts/UserContext";
+import React, { useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { AUTH_HUB_URL } from "../utils/apiFetch";
 
 export default function Login() {
-	// username is hidden from the UI and set to admin by default
-	const [username, setUsername] = useState("admin");
-	const [password, setPassword] = useState("");
-	const { error, setError, clearError } = useError();
-	const [success, setSuccess] = useState(null);
-
-	const history = useHistory();
 	const location = useLocation();
-	const { refreshUser } = useUser();
-	// read returnTo from query params (e.g. /login?returnTo=/admin?page=1)
-	const params = new URLSearchParams(location.search);
-	const returnToParam = params.get("returnTo") || "/";
 
-	async function handleSubmit(e) {
-		e.preventDefault();
-		clearError();
-		setSuccess(null);
-		try {
-			const res = await fetch("/.netlify/functions/auth", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ username, password }),
-			});
-			const data = await res.json();
-			if (!res.ok) {
-				setError(data.error || "Login failed");
-				return;
-			}
-			// store token and redirect to requested page (if safe)
-			if (data.token) {
-				localStorage.setItem("token", data.token);
-				refreshUser();
-			}
-			setSuccess(
-				`Logged in as ${data.user.username} (${data.user.role})`
-			);
-			// Only allow internal redirects starting with '/'
-			if (returnToParam && returnToParam.startsWith("/")) {
-				history.push(returnToParam);
-			} else {
-				history.push("/");
-			}
-			setPassword("");
-		} catch (err) {
-			console.error(err);
-			setError(err.message || "Network error");
-		}
-	}
+	useEffect(() => {
+		const returnTo = new URLSearchParams(location.search).get("returnTo");
+		// Old-style relative returnTo values (e.g. "/admin") become absolute so
+		// the hub can validate the host and send the user back here.
+		const target = new URL(returnTo || "/", window.location.origin).href;
+		window.location.replace(
+			`${AUTH_HUB_URL}/?returnTo=${encodeURIComponent(target)}`
+		);
+	}, [location.search]);
 
-	return (
-		<>
-			<h2>Login</h2>
-
-			<form onSubmit={handleSubmit}>
-				{/* hidden username field */}
-				<input type="hidden" name="username" value={username} />
-
-				<label>
-					Password
-					<input
-						type="password"
-						name="password"
-						value={password}
-						onChange={(e) => setPassword(e.target.value)}
-						required
-					/>
-				</label>
-
-				<div>
-					<button type="submit">Log in</button>
-				</div>
-			</form>
-		</>
-	);
+	return <p>Redirecting to login…</p>;
 }
