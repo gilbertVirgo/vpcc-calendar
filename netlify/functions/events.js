@@ -36,7 +36,13 @@ exports.handler = async function (event) {
 			role = auth.user && auth.user.role;
 			console.log("[events] authenticated user role", { role });
 
-			if (!isJson(event.headers)) {
+			// DELETE has no body to parse and a cross-site DELETE already
+			// triggers a CORS preflight, so only require JSON for the
+			// methods that actually parse a request body.
+			if (
+				(method === "POST" || method === "PUT") &&
+				!isJson(event.headers)
+			) {
 				return {
 					statusCode: 415,
 					body: JSON.stringify({ error: "Expected application/json" }),
