@@ -9,6 +9,7 @@ localStorage token flow still works.
 
 - `REACT_APP_AUTH_HUB_URL` (optional) — hub base URL, default `https://auth.vpcc.church`.
 - `npm run test:functions` — runs the Netlify function unit tests (`node --test`).
+- Cookie auth only works when the site is served from a `*.vpcc.church` domain (not `*.netlify.app`), and `JWT_SECRET` must be identical on the calendar, auth and trifold sites.
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 

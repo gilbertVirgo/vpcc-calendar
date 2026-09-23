@@ -3,6 +3,7 @@ const Event = require("./models/Event");
 const moment = require("moment");
 const { requireAuth } = require("./utils/requireAuth");
 const { getCookie } = require("./utils/cookies");
+const { isJson } = require("./utils/contentType");
 
 exports.handler = async function (event) {
 	try {
@@ -34,6 +35,13 @@ exports.handler = async function (event) {
 			if (!auth.ok) return auth.response;
 			role = auth.user && auth.user.role;
 			console.log("[events] authenticated user role", { role });
+
+			if (!isJson(event.headers)) {
+				return {
+					statusCode: 415,
+					body: JSON.stringify({ error: "Expected application/json" }),
+				};
+			}
 		} else if (hasAuthHeader || hasSessionCookie) {
 			const auth = await requireAuth(event);
 			if (auth.ok) role = auth.user && auth.user.role;
