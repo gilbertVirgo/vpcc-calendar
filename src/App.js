@@ -13,6 +13,22 @@ import Login from "./pages/Login";
 
 import React from "react";
 import { UserProvider, useUser } from "./contexts/UserContext";
+import { AUTH_HUB_URL } from "./utils/apiFetch";
+
+async function logout(e) {
+	e.preventDefault();
+	try {
+		// Clear the shared vpcc_session cookie on the hub
+		await fetch(`${AUTH_HUB_URL}/api/logout`, {
+			method: "POST",
+			credentials: "include",
+		});
+	} catch (err) {
+		console.error("Hub logout failed", err);
+	}
+	localStorage.removeItem("token");
+	window.location.href = "/";
+}
 
 function App() {
 	const { user } = useUser();
@@ -22,13 +38,7 @@ function App() {
 				<ul className="nav__wrapper">
 					<li>
 						{user ? (
-							<Link
-								to="/"
-								onClick={() => {
-									localStorage.removeItem("token");
-									window.location.href = "/";
-								}}
-							>
+							<Link to="/" onClick={logout}>
 								Logout
 							</Link>
 						) : (
