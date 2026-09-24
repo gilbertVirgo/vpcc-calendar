@@ -4,7 +4,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import CalendarGrid from "../../components/CalendarGrid";
 import moment from "moment";
 import { useModal } from "../../contexts/ModalContext";
-import apiFetch from "../../utils/apiFetch";
+import { apiJson, authHeaders } from "../../utils/apiFetch";
+import { useError } from "../../contexts/ErrorContext";
+
+const LOAD_ERROR = "Couldn't load events. Please try again.";
 
 // Using ModalContext and EventForm components
 
@@ -36,42 +39,32 @@ export default function EditCalendar() {
 	}, [startDate, endDate]);
 
 	const [events, setEvents] = useState([]);
-	const [modalDate, setModalDate] = useState(null);
-	const [editEvent, setEditEvent] = useState(null);
-	const { showModal, closeModal } = useModal();
+	const { showModal } = useModal();
+	const { setError, clearError } = useError();
 
 	useEffect(() => {
 		let cancelled = false;
-		async function load() {
-			const y = current.year();
-			const m = current.month() + 1;
-			try {
-				const token = localStorage.getItem("token");
-				const headers = token
-					? { Authorization: `Bearer ${token}` }
-					: {};
-				const res = await apiFetch(
-					`/.netlify/functions/events?year=${y}&month=${m}`,
-					{ headers },
-				);
-				if (!res.ok) throw new Error(`Status ${res.status}`);
-				const data = await res.json();
-				if (!cancelled) setEvents(data.events || []);
-			} catch (err) {
-				console.error("Failed loading events", err);
-				if (!cancelled) setEvents([]);
-			}
-		}
-
-		// expose load via ref on component scope by storing it on stateless variable
-		load();
+		const y = current.year();
+		const m = current.month() + 1; // 1-based
+		apiJson(
+			`/.netlify/functions/events?year=${y}&month=${m}`,
+			{ headers: authHeaders() },
+			LOAD_ERROR,
+		)
+			.then((data) => {
+				if (cancelled) return;
+				setEvents((data && data.events) || []);
+				clearError(LOAD_ERROR);
+			})
+			.catch((err) => {
+				if (cancelled || err.redirecting) return;
+				setEvents([]);
+				setError(err.message);
+			});
 		return () => {
 			cancelled = true;
 		};
-	}, [current]);
-
-	// Let CalendarGrid handle grouping; pass raw events array instead.
-	const eventsByDate = null;
+	}, [current, setError, clearError]);
 
 	function prevMonth() {
 		setCurrent((s) => s.clone().subtract(1, "month"));
@@ -81,7 +74,6 @@ export default function EditCalendar() {
 	}
 
 	function handleCreateClick(date) {
-		setModalDate(date);
 		showModal(({ close }) => (
 			<CreateEventForm
 				date={date}
@@ -98,7 +90,6 @@ export default function EditCalendar() {
 	}
 
 	function handleEventClick(ev) {
-		setEditEvent(ev);
 		showModal(({ close }) => (
 			<EditEventForm
 				event={ev}

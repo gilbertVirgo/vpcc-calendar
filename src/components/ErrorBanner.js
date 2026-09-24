@@ -9,7 +9,7 @@ export default function ErrorBanner() {
 	return (
 		<div className="error-banner" role="alert">
 			<div>{error}</div>
-			<button className="button--ghost" onClick={clearError}>
+			<button className="button--ghost" onClick={() => clearError()}>
 				Clear
 			</button>
 		</div>

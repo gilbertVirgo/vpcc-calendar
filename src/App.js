@@ -11,38 +11,46 @@ import EditCalendar from "./pages/adminOnly/EditCalendar";
 import ErrorBanner from "./components/ErrorBanner";
 import Login from "./pages/Login";
 
-import React from "react";
-import { UserProvider, useUser } from "./contexts/UserContext";
-import { AUTH_HUB_URL } from "./utils/apiFetch";
-
-async function logout(e) {
-	e.preventDefault();
-	try {
-		// Clear the shared vpcc_session cookie on the hub
-		await fetch(`${AUTH_HUB_URL}/api/logout`, {
-			method: "POST",
-			credentials: "include",
-		});
-	} catch (err) {
-		console.error("Hub logout failed", err);
-	}
-	localStorage.removeItem("token");
-	window.location.href = "/";
-}
+import React, { useState } from "react";
+import { useUser } from "./contexts/UserContext";
+import { useError } from "./contexts/ErrorContext";
 
 function App() {
-	const { user } = useUser();
+	const { user, logout } = useUser();
+	const { setError, clearError } = useError();
+	const [loggingOut, setLoggingOut] = useState(false);
+
+	async function handleLogout() {
+		setLoggingOut(true);
+		try {
+			await logout();
+			clearError();
+		} catch (err) {
+			console.error(err);
+			setError("Couldn't log out. Please try again.");
+		} finally {
+			setLoggingOut(false);
+		}
+	}
+
 	return (
 		<Router>
 			<main className="group--vt--lg">
 				<ul className="nav__wrapper">
 					<li>
 						{user ? (
-							<Link to="/" onClick={logout}>
+							<button
+								type="button"
+								className="button--sm"
+								onClick={handleLogout}
+								disabled={loggingOut}
+							>
 								Logout
-							</Link>
+							</button>
 						) : (
-							<Link to="/login">Login</Link>
+							<Link to="/login" className="button button--sm">
+								Login
+							</Link>
 						)}
 					</li>
 				</ul>
@@ -79,10 +87,6 @@ function App() {
 						}}
 					/>
 				</Switch>
-				<p>
-					Designed by{" "}
-					<a href="mailto:gilbertjvirgo@gmail.com">Gilbert Virgo</a>
-				</p>
 			</main>
 		</Router>
 	);
