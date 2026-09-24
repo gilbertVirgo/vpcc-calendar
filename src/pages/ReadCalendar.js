@@ -2,11 +2,15 @@ import React, { useEffect, useMemo, useState } from "react";
 
 import CalendarGrid from "../components/CalendarGrid";
 import moment from "moment";
-import apiFetch from "../utils/apiFetch";
+import { apiJson, authHeaders } from "../utils/apiFetch";
+import { useError } from "../contexts/ErrorContext";
+
+const LOAD_ERROR = "Couldn't load events. Please try again.";
 
 export default function Calendar() {
 	const [current, setCurrent] = useState(() => moment());
 	const [events, setEvents] = useState([]);
+	const { setError, clearError } = useError();
 
 	const startOfMonth = useMemo(
 		() => current.clone().startOf("month"),
@@ -33,42 +37,29 @@ export default function Calendar() {
 		return d;
 	}, [startDate, endDate]);
 
-	// Pass raw events to CalendarGrid; grouping is handled there now.
-	const eventsByDate = null;
-
 	useEffect(() => {
 		let cancelled = false;
-		async function load() {
-			const y = current.year();
-			const m = current.month() + 1; // 1-based
-			try {
-				const token = localStorage.getItem("token");
-				const headers = token
-					? { Authorization: `Bearer ${token}` }
-					: {};
-				const res = await apiFetch(
-					`/.netlify/functions/events?year=${y}&month=${m}`,
-					{ headers },
-				);
-				if (!res.ok) {
-					console.error("Failed to load events", res.status);
-					setEvents([]);
-					return;
-				}
-				const data = await res.json();
-				if (!cancelled) setEvents(data.events || []);
-			} catch (err) {
-				if (!cancelled) {
-					console.error("Error fetching events", err);
-					setEvents([]);
-				}
-			}
-		}
-		load();
+		const y = current.year();
+		const m = current.month() + 1; // 1-based
+		apiJson(
+			`/.netlify/functions/events?year=${y}&month=${m}`,
+			{ headers: authHeaders() },
+			LOAD_ERROR,
+		)
+			.then((data) => {
+				if (cancelled) return;
+				setEvents((data && data.events) || []);
+				clearError(LOAD_ERROR);
+			})
+			.catch((err) => {
+				if (cancelled || err.redirecting) return;
+				setEvents([]);
+				setError(err.message);
+			});
 		return () => {
 			cancelled = true;
 		};
-	}, [current]);
+	}, [current, setError, clearError]);
 
 	function prevMonth() {
 		setCurrent((c) => c.clone().subtract(1, "month"));

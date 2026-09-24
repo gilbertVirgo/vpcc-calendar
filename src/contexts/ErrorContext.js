@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useState } from "react";
 
 // ErrorContext provides a simple app-wide error state and helpers.
-// Value shape: { error: string|null, setError: (msg) => void, clearError: () => void }
+// Value shape: { error: string|null, setError: (msg) => void, clearError: (msg?) => void }
 const ErrorContext = createContext(null);
 
 export function ErrorProvider({ children }) {
@@ -13,7 +13,13 @@ export function ErrorProvider({ children }) {
 		else setErrorState(msg);
 	}, []);
 
-	const clearError = useCallback(() => setErrorState(null), []);
+	// clearError(msg) only clears if that message is the one showing, so a
+	// successful retry doesn't hide an unrelated error.
+	const clearError = useCallback(
+		(msg) =>
+			setErrorState((cur) => (msg === undefined || cur === msg ? null : cur)),
+		[]
+	);
 
 	const value = {
 		error,
