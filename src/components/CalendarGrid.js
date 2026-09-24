@@ -24,6 +24,8 @@ function formatTime(arrOrObj) {
 // - onPrev, onNext: navigation handlers
 // - showCreate: boolean to show + button in cells
 // - onCreateClick(dateMoment): called when + clicked
+// - loading: a fetch is in flight (aria-busy)
+// - skeleton: show skeleton events (and no "+") in current-month cells
 export default function CalendarGrid({
 	days,
 	current,
@@ -35,6 +37,8 @@ export default function CalendarGrid({
 	showCreate = false,
 	onCreateClick,
 	onEventClick,
+	loading = false,
+	skeleton = false,
 }) {
 	// Compute grouped events. Priority:
 	// 1) if eventsByDate provided, use it
@@ -105,6 +109,9 @@ export default function CalendarGrid({
 
 	return (
 		<div className="calendar group--vt--md">
+			<p role="status" className="visually-hidden">
+				{skeleton ? "Loading events…" : ""}
+			</p>
 			<div className="calendar__header group--hz--md">
 				<button
 					onClick={() => canGoPrev && onPrev && onPrev()}
@@ -126,7 +133,7 @@ export default function CalendarGrid({
 				</button>
 			</div>
 
-			<div className="calendar__grid">
+			<div className="calendar__grid" aria-busy={loading}>
 				{Array.from({ length: 7 }).map((_, i) => (
 					<div key={i} className="calendar__week-name hide--sm-down">
 						{moment()
@@ -137,9 +144,15 @@ export default function CalendarGrid({
 				{days.map((day) => {
 					const isCurrentMonth = day.month() === current.month();
 					const key = day.format("YYYY-MM-DD");
+					// Stale events from the previous month must not show while loading.
+					const dayEvents = skeleton ? null : grouped[key];
+					// 0–2 placeholders, varied by day-of-month so it reads like a calendar.
+					const skeletons =
+						skeleton && isCurrentMonth ? ((day.date() * 7) % 5) % 3 : 0;
 
 					let shouldHideOnMobile =
-						!isCurrentMonth || (!grouped[key] && !showCreate);
+						!isCurrentMonth ||
+						(!dayEvents && !skeletons && !showCreate);
 					return (
 						<div
 							key={key}
@@ -164,9 +177,26 @@ export default function CalendarGrid({
 								{day.format("dddd D MMMM")}
 							</p>
 
-							{grouped[key] && (
+							{skeletons > 0 && (
+								<div
+									className="calendar__event group--vt--xs"
+									aria-hidden="true"
+								>
+									{Array.from({ length: skeletons }, (_, i) => (
+										<div
+											key={i}
+											className="calendar__event-skeleton group--vt--sm"
+										>
+											<div className="skeleton" />
+											<div className="skeleton" />
+										</div>
+									))}
+								</div>
+							)}
+
+							{dayEvents && (
 								<div className="calendar__event group--vt--xs">
-									{(grouped[key] || []).map((ev) => (
+									{dayEvents.map((ev) => (
 										<div
 											key={ev._id}
 											className="calendar__event-item group--vt--sm"
@@ -225,7 +255,7 @@ export default function CalendarGrid({
 								</div>
 							)}
 
-							{showCreate && isCurrentMonth && (
+							{showCreate && isCurrentMonth && !skeleton && (
 								<button
 									className="calendar__add"
 									onClick={() =>
