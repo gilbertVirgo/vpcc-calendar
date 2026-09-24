@@ -7,9 +7,11 @@ export default function ErrorBanner() {
 	if (!error) return null;
 
 	return (
-		<div>
+		<div className="error-banner" role="alert">
 			<div>{error}</div>
-			<button onClick={clearError}>Clear</button>
+			<button className="button--ghost" onClick={clearError}>
+				Clear
+			</button>
 		</div>
 	);
 }

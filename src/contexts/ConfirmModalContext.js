@@ -63,6 +63,7 @@ export function useConfirm() {
 							}}
 						>
 							<button
+								className="button--danger"
 								onClick={() => {
 									if (input) {
 										const v =

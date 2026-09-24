@@ -147,6 +147,10 @@ export default function CalendarGrid({
 								!isCurrentMonth
 									? "calendar__cell--not-current-month"
 									: ""
+							} ${
+								day.isSame(moment(), "day")
+									? "calendar__cell--today"
+									: ""
 							}
 						${shouldHideOnMobile ? "hide--sm-down" : ""}`}
 						>
@@ -223,6 +227,7 @@ export default function CalendarGrid({
 
 							{showCreate && isCurrentMonth && (
 								<button
+									className="calendar__add"
 									onClick={() =>
 										onCreateClick && onCreateClick(day)
 									}

@@ -95,8 +95,10 @@ export function ModalProvider({ children }) {
 						{typeof content === "function"
 							? content({ close: closeModal })
 							: content}
-						<div style={{ marginTop: "1rem" }}>
-							<button onClick={closeModal}>Close</button>
+						<div className="modal__footer">
+							<button className="button--ghost" onClick={closeModal}>
+								Close
+							</button>
 						</div>
 					</div>
 				</div>
