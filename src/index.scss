@@ -407,9 +407,20 @@ button,
 	}
 }
 
+/* Quiet "+": borderless and muted until hovered/focused. */
 .calendar__add {
-	font-size: 1.25rem;
+	height: 2rem;
+	border-color: transparent;
+	color: var(--color-ink-muted);
+	font-size: 1.125rem;
+	font-weight: var(--font-weight-medium);
 	line-height: 1;
+
+	&:hover,
+	&:focus-visible {
+		color: var(--color-ink);
+		background-color: var(--color-surface-sunken);
+	}
 }
 
 /* Events: raised card with accent rule, like a subtle badge. */
