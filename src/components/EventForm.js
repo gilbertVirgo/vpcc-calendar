@@ -248,7 +248,7 @@ function EventForm({
 				</label>
 
 				{timeError ? (
-					<div style={{ color: "#c00", marginTop: "0.4rem" }}>
+					<div className="form-error" role="alert">
 						{timeError}
 					</div>
 				) : null}
@@ -262,7 +262,11 @@ function EventForm({
 				</label>
 
 				<div className="group--hz--sm">
-					<button type="submit" disabled={loading}>
+					<button
+						type="submit"
+						className="button--primary"
+						disabled={loading}
+					>
 						{submitLabel}
 					</button>
 					{showDelete && (
