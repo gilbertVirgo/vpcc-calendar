@@ -107,6 +107,8 @@ $breakpoints: (
 	--color-focus-ring: var(--color-primary-600);
 	--color-danger: var(--color-danger-500);
 	--color-danger-surface: var(--color-danger-100);
+	--color-skeleton: var(--color-surface-sunken);
+	--color-skeleton-sheen: oklch(100% 0 0 / 0.6);
 
 	/* Type */
 	--font-sans: "area-inktrap", ui-sans-serif, system-ui, -apple-system,
@@ -146,6 +148,7 @@ $breakpoints: (
 	--duration-fast: 160ms;
 	--duration-base: 240ms;
 	--ease-standard: cubic-bezier(0.2, 0, 0, 1);
+	--duration-shimmer: 1600ms;
 }
 
 /* Reduced motion — the single kill switch (vpcc-v1 tokens.motion.css). */
@@ -455,6 +458,74 @@ button,
 	p {
 		color: var(--color-ink-secondary);
 	}
+}
+
+/* Loading placeholder: same box as .calendar__event-item, neutral lines. */
+.calendar__event-skeleton {
+	padding: 0.5rem;
+	border: 1px solid var(--color-line);
+	border-radius: var(--radius-md);
+
+	.skeleton {
+		height: 1rem;
+	}
+
+	.skeleton + .skeleton {
+		width: 60%;
+		height: 0.75rem;
+	}
+}
+
+/* Skeleton — shared spec with vpcc-v1. */
+.skeleton {
+	position: relative;
+	overflow: hidden;
+	background-color: var(--color-skeleton);
+	border-radius: var(--radius-sm);
+	color: transparent;
+	user-select: none;
+	pointer-events: none;
+}
+
+.skeleton::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	translate: -100% 0;
+	background-image: linear-gradient(
+		90deg,
+		transparent,
+		var(--color-skeleton-sheen),
+		transparent
+	);
+	animation: skeleton-shimmer var(--duration-shimmer) var(--ease-standard)
+		infinite;
+}
+
+@keyframes skeleton-shimmer {
+	to {
+		translate: 100% 0;
+	}
+}
+
+/* After .skeleton::after so it wins: a static block, no strobing sheen. */
+@media (prefers-reduced-motion: reduce) {
+	.skeleton::after {
+		animation: none;
+		display: none;
+	}
+}
+
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
 }
 
 /* Responsive hide utilities

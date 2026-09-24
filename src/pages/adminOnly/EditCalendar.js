@@ -39,6 +39,9 @@ export default function EditCalendar() {
 	}, [startDate, endDate]);
 
 	const [events, setEvents] = useState([]);
+	const [loading, setLoading] = useState(true);
+	// Month whose events are on screen; a same-month reload keeps them visible.
+	const [loadedMonth, setLoadedMonth] = useState(null);
 	const { showModal } = useModal();
 	const { setError, clearError } = useError();
 
@@ -46,6 +49,8 @@ export default function EditCalendar() {
 		let cancelled = false;
 		const y = current.year();
 		const m = current.month() + 1; // 1-based
+		const key = current.format("YYYY-MM");
+		setLoading(true);
 		apiJson(
 			`/.netlify/functions/events?year=${y}&month=${m}`,
 			{ headers: authHeaders() },
@@ -54,11 +59,15 @@ export default function EditCalendar() {
 			.then((data) => {
 				if (cancelled) return;
 				setEvents((data && data.events) || []);
+				setLoading(false);
+				setLoadedMonth(key);
 				clearError(LOAD_ERROR);
 			})
 			.catch((err) => {
 				if (cancelled || err.redirecting) return;
 				setEvents([]);
+				setLoading(false);
+				setLoadedMonth(key);
 				setError(err.message);
 			});
 		return () => {
@@ -116,6 +125,8 @@ export default function EditCalendar() {
 				days={days}
 				current={current}
 				events={events}
+				loading={loading}
+				skeleton={loading && loadedMonth !== current.format("YYYY-MM")}
 				onPrev={prevMonth}
 				onNext={nextMonth}
 				showCreate
