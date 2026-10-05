@@ -685,11 +685,57 @@ input[type="checkbox"] {
 	color: var(--color-danger);
 }
 
-/* Nav: subscribe links and the Login/Logout control, pinned right. */
+/* Subscribe dropdown beneath the calendar: native <details>, menu floats. */
+.subscribe {
+	position: relative;
+	align-self: flex-start;
+
+	summary {
+		list-style: none;
+
+		&::-webkit-details-marker {
+			display: none;
+		}
+	}
+}
+
+.subscribe__menu {
+	position: absolute;
+	top: calc(100% + 0.25rem);
+	left: 0;
+	z-index: 10;
+	padding: 0.25rem;
+	border: 1px solid var(--color-line);
+	border-radius: var(--radius-lg);
+	background: var(--color-surface);
+	box-shadow: var(--shadow-overlay);
+	list-style-type: none;
+	white-space: nowrap;
+
+	a,
+	button {
+		display: block;
+		width: 100%;
+		height: auto;
+		padding: 0.5rem 0.75rem;
+		border: 0;
+		border-radius: var(--radius-md);
+		color: var(--color-ink);
+		font-size: var(--text-body-sm);
+		font-weight: inherit;
+		text-align: left;
+		text-decoration: none;
+
+		&:hover {
+			background-color: var(--color-surface-sunken);
+		}
+	}
+}
+
+/* Nav: only holds the Login/Logout control, pinned right. */
 .nav__wrapper {
 	@extend .group--hz--md;
 
 	justify-content: flex-end;
-	flex-wrap: wrap;
 	list-style-type: none;
 }

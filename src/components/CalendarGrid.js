@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import moment from "moment";
 import expandRecurringEvents from "../utils/eventUtils";
+import SubscribeMenu from "./SubscribeMenu";
 
 function formatTime(arrOrObj) {
 	if (!arrOrObj) return null;
@@ -270,6 +271,8 @@ export default function CalendarGrid({
 					);
 				})}
 			</div>
+
+			<SubscribeMenu />
 		</div>
 	);
 }
