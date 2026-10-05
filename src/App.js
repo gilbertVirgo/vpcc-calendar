@@ -15,9 +15,6 @@ import React, { useState } from "react";
 import { useUser } from "./contexts/UserContext";
 import { useError } from "./contexts/ErrorContext";
 
-// Public iCalendar feed (netlify/functions/calendar.js), scheme-less
-const FEED = `${window.location.host}/.netlify/functions/calendar`;
-
 function App() {
 	const { user, logout } = useUser();
 	const { setError, clearError } = useError();
@@ -40,24 +37,6 @@ function App() {
 		<Router>
 			<main className="group--vt--lg">
 				<ul className="nav__wrapper">
-					<li>
-						<a href={`webcal://${FEED}`} className="button button--sm">
-							Subscribe
-						</a>
-					</li>
-					<li>
-						{/* Google Calendar has no webcal:// handler on most devices */}
-						<a
-							href={`https://calendar.google.com/calendar/render?cid=${encodeURIComponent(
-								`webcal://${FEED}`,
-							)}`}
-							target="_blank"
-							rel="noreferrer"
-							className="button button--sm"
-						>
-							Add to Google
-						</a>
-					</li>
 					<li>
 						{user ? (
 							<button
