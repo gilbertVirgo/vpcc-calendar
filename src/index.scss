@@ -685,10 +685,11 @@ input[type="checkbox"] {
 	color: var(--color-danger);
 }
 
-/* Nav: only holds the Login/Logout control, pinned right. */
+/* Nav: subscribe links and the Login/Logout control, pinned right. */
 .nav__wrapper {
 	@extend .group--hz--md;
 
 	justify-content: flex-end;
+	flex-wrap: wrap;
 	list-style-type: none;
 }
